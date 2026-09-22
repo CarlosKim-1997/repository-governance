@@ -16,10 +16,69 @@ test('plan-only empty Greenfield, apply, idempotency and offline checker',async(
   assert.ok(plan.entries.every(x=>x.action==='CREATE'));
   const applied=await applyInit(root,'greenfield');assert.equal(applied.result,'INSTALLED_VERIFIED');
   assert.equal(applied.check.exit,0);
+  assert.equal((await planInit(root,'greenfield')).presence,'GOVERNANCE_INSTALLED');
   const second=await applyInit(root,'greenfield');assert.equal(second.result,'ALREADY_INSTALLED');
   assert.equal(second.created.length,0);
   const {stdout}=await exec(process.execPath,['tooling/governance/check.mjs'],{cwd:root});
   assert.match(stdout,/PASS/);
+}));
+test('project-owned State and Principles edits retain installed identity',async()=>fixture(async root=>{
+  assert.equal((await applyInit(root,'greenfield')).result,'INSTALLED_VERIFIED');
+  const statePath=join(root,'canon/state/current.md'), principlesPath=join(root,'canon/principles/PROJECT.md');
+  const state=(await readFile(statePath,'utf8')).replace('status: NOT_READY','status: READY');
+  const principles=(await readFile(principlesPath,'utf8'))+'\nA ratified project principle.\n';
+  await writeFile(statePath,state);await writeFile(principlesPath,principles);
+  await writeFile(join(root,'work/reports/notes.md'),'Project provenance.\n');
+  const plan=await planInit(root,'greenfield');
+  assert.equal(plan.presence,'GOVERNANCE_INSTALLED');assert.equal(plan.blocked,false);assert.equal(plan.upgrade_review_required,false);
+  assert.equal((await applyInit(root,'greenfield')).result,'ALREADY_INSTALLED');
+  assert.equal(await readFile(statePath,'utf8'),state);assert.equal(await readFile(principlesPath,'utf8'),principles);
+}));
+test('mixed AGENTS and manifest edits retain installed identity',async()=>fixture(async root=>{
+  assert.equal((await applyInit(root,'greenfield')).result,'INSTALLED_VERIFIED');
+  const agentsPath=join(root,'AGENTS.md'),manifestPath=join(root,'governance/manifest.yaml');
+  const agents=(await readFile(agentsPath,'utf8'))+'\nProject-local router note.\n';
+  const manifest=(await readFile(manifestPath,'utf8')).replace('  - global\n','  - global\n  - robotics\n');
+  await writeFile(agentsPath,agents);await writeFile(manifestPath,manifest);
+  const plan=await planInit(root,'brownfield');
+  assert.equal(plan.presence,'GOVERNANCE_INSTALLED');assert.equal(plan.blocked,false);
+  assert.equal(plan.upgrade_review_required,false);
+  assert.equal(plan.entries.find(x=>x.path==='AGENTS.md').action,'EXISTS_DIFFERENT');
+  assert.equal((await applyInit(root,'brownfield')).result,'ALREADY_INSTALLED');
+  assert.equal(await readFile(agentsPath,'utf8'),agents);assert.equal(await readFile(manifestPath,'utf8'),manifest);
+}));
+test('older installed snapshot is not filled from a grown upstream template',async()=>fixture(async root=>{
+  assert.equal((await applyInit(root,'greenfield')).result,'INSTALLED_VERIFIED');
+  const newer=await mkdtemp(join(tmpdir(),'governance-template-'));
+  try {
+    await cp(new URL('../../template/',import.meta.url),newer,{recursive:true});
+    await writeFile(join(newer,'governance/new-upstream-note.md'),'New upstream file.\n');
+    await writeFile(join(newer,'governance/SPEC.md'),'Updated upstream Core.\n');
+    await writeFile(join(newer,'governance/manifest.yaml'),(await readFile(join(newer,'governance/manifest.yaml'),'utf8')).replace('governance_version: 1.0.0','governance_version: 1.1.0'));
+    const plan=await planInit(root,'greenfield',newer);
+    assert.equal(plan.presence,'GOVERNANCE_INSTALLED');assert.equal(plan.blocked,false);assert.equal(plan.upgrade_review_required,true);
+    assert.equal(plan.entries.find(x=>x.path==='governance/new-upstream-note.md').action,'UPSTREAM_MISSING_LOCALLY');
+    assert.equal((await applyInit(root,'greenfield',newer)).result,'ALREADY_INSTALLED');
+    await assert.rejects(readFile(join(root,'governance/new-upstream-note.md')));
+    assert.notEqual(await readFile(join(root,'governance/SPEC.md'),'utf8'),'Updated upstream Core.\n');
+  } finally { await rm(newer,{recursive:true,force:true}); }
+}));
+test('local Core modification remains installed and requires upgrade review',async()=>fixture(async root=>{
+  assert.equal((await applyInit(root,'greenfield')).result,'INSTALLED_VERIFIED');
+  const path=join(root,'governance/SPEC.md'),local=(await readFile(path,'utf8'))+'\nLocal governance note.\n';
+  await writeFile(path,local);
+  const plan=await planInit(root,'greenfield');
+  assert.equal(plan.presence,'GOVERNANCE_INSTALLED');assert.equal(plan.blocked,false);assert.equal(plan.upgrade_review_required,true);
+  assert.match(plan.note,/upgrade review/);
+  assert.equal((await applyInit(root,'greenfield')).result,'ALREADY_INSTALLED');
+  assert.equal(await readFile(path,'utf8'),local);
+}));
+test('missing selected State in an installed snapshot requires recovery',async()=>fixture(async root=>{
+  assert.equal((await applyInit(root,'greenfield')).result,'INSTALLED_VERIFIED');
+  await rm(join(root,'canon/state/current.md'));
+  const plan=await planInit(root,'greenfield');assert.equal(plan.presence,'PARTIAL_GOVERNANCE');assert.equal(plan.blocked,true);
+  assert.equal((await applyInit(root,'greenfield')).result,'RECOVERY_REQUIRED');
+  await assert.rejects(readFile(join(root,'canon/state/current.md')));
 }));
 test('language neutral and Python project',async()=>fixture(async root=>{
   await writeFile(join(root,'README.txt'),'Research notes');

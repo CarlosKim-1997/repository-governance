@@ -1,9 +1,10 @@
-import { readdir, readFile, lstat, mkdir, writeFile } from 'node:fs/promises';
+import { readdir, readFile, lstat, stat, realpath, mkdir, writeFile } from 'node:fs/promises';
 import { resolve, relative, join, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import process from 'node:process';
+import YAML from 'yaml';
 
 const exec=promisify(execFile);
 const upstream=resolve(dirname(fileURLToPath(import.meta.url)),'../../template');
@@ -44,34 +45,67 @@ async function gitInfo(target, entries) {
   } catch { if(inside) dirty='DIRTY_AMBIGUOUS'; }
   return {inside,branch,head,dirty,worktrees};
 }
-function presence(targets, signals) {
-  const specific=['governance/manifest.yaml','governance/SPEC.md','tooling/governance/check.mjs'];
-  if(specific.some(x=>targets.get(x))) return [...targets.values()].every(Boolean)?'GOVERNANCE_INSTALLED':'PARTIAL_GOVERNANCE';
-  if(signals.governance && (signals.tooling || signals.state))return 'GOVERNANCE_UNKNOWN';
-  return 'NO_GOVERNANCE';
+const installedLandmarks=[
+  'AGENTS.md','governance/README.md','governance/manifest.yaml','governance/SPEC.md',
+  ...['decision','constraint','open-question','task','state'].map(x=>`governance/schemas/${x}-v1.md`),
+  'canon/principles/PROJECT.md','tooling/governance/check.mjs','tooling/governance/version.json'
+];
+async function installedPresence(root) {
+  const specific=['governance/manifest.yaml','governance/SPEC.md','tooling/governance/check.mjs','tooling/governance/version.json'];
+  if(!(await Promise.all(specific.map(x=>present(resolve(root,x))))).some(Boolean)) {
+    const governance=!!await present(resolve(root,'governance'));
+    const tooling=!!await present(resolve(root,'tooling/governance'));
+    const state=!!await present(resolve(root,'canon/state/current.md'));
+    return governance && (tooling || state)?'GOVERNANCE_UNKNOWN':'NO_GOVERNANCE';
+  }
+  const realRoot=await realpath(root);
+  const localFile=async path=>{
+    try {
+      const target=resolve(root,path), info=await stat(target), actual=await realpath(target);
+      return info.isFile() && (actual===realRoot || actual.startsWith(realRoot+sep));
+    } catch(e) { if(e.code==='ENOENT')return false; throw e; }
+  };
+  if(!(await Promise.all(installedLandmarks.map(localFile))).every(Boolean))return 'PARTIAL_GOVERNANCE';
+  try {
+    const document=YAML.parseDocument(await readFile(resolve(root,'governance/manifest.yaml'),'utf8'),{uniqueKeys:true,strict:true});
+    if(document.errors.length)return 'PARTIAL_GOVERNANCE';
+    const manifest=document.toJS();
+    const version=JSON.parse(await readFile(resolve(root,'tooling/governance/version.json'),'utf8'));
+    if(manifest?.schema!=='governance-manifest/v1' || typeof manifest.governance_version!=='string' || !manifest.governance_version ||
+       !Array.isArray(manifest.areas) || !manifest.areas.includes('global') ||
+       !Array.isArray(manifest.supported_schemas) || !manifest.supported_schemas.length ||
+       version?.governance_version!==manifest.governance_version ||
+       typeof manifest.current_state!=='string' || !/^canon\/state\/[A-Za-z0-9._-]+\.md$/.test(manifest.current_state) || manifest.current_state.includes('..') ||
+       !await localFile(manifest.current_state))return 'PARTIAL_GOVERNANCE';
+  } catch { return 'PARTIAL_GOVERNANCE'; }
+  return 'GOVERNANCE_INSTALLED';
 }
-export async function planInit(target, mode) {
+export async function planInit(target, mode, templateRoot=upstream) {
   if(!['greenfield','brownfield'].includes(mode))throw new Error('explicit --greenfield or --brownfield required');
-  const root=resolve(target), listing=await files(upstream), existing=new Map(), entries=[];
+  const root=resolve(target), listing=await files(templateRoot), state=await installedPresence(root), entries=[];
   for(const rel of listing) {
     const destination=resolve(root,rel), pathRelative=relative(root,destination);
     if(pathRelative.startsWith('..'+sep)||pathRelative==='..')throw new Error('target path escapes repository');
-    const s=await present(destination); existing.set(rel,!!s);
+    const s=await present(destination);
     let action='CREATE';
-    if(await linkedParent(root,rel))action='MERGE_REQUIRED';
+    if(await linkedParent(root,rel))action=state==='GOVERNANCE_INSTALLED'?'EXISTS_DIFFERENT':'MERGE_REQUIRED';
     else if(s) {
-      if(!s.isFile()) action='MERGE_REQUIRED';
-      else action=(await readFile(destination)).equals(await readFile(resolve(upstream,rel)))?'EXISTS_IDENTICAL':rel==='AGENTS.md'?'MERGE_REQUIRED':'EXISTS_DIFFERENT';
+      if(!s.isFile()) action=state==='GOVERNANCE_INSTALLED'?'EXISTS_DIFFERENT':'MERGE_REQUIRED';
+      else action=(await readFile(destination)).equals(await readFile(resolve(templateRoot,rel)))?'EXISTS_IDENTICAL':state==='GOVERNANCE_INSTALLED'?'EXISTS_DIFFERENT':rel==='AGENTS.md'?'MERGE_REQUIRED':'EXISTS_DIFFERENT';
     }
+    else if(state==='GOVERNANCE_INSTALLED')action='UPSTREAM_MISSING_LOCALLY';
     entries.push({path:rel,action});
   }
-  const signals={governance:!!await present(resolve(root,'governance')),tooling:!!await present(resolve(root,'tooling/governance')),state:!!await present(resolve(root,'canon/state/current.md'))};
-  const state=presence(existing,signals);
-  const git=await gitInfo(root,entries);
-  return {mode,target:root,presence:state,git,entries,blocked:['PARTIAL_GOVERNANCE','GOVERNANCE_UNKNOWN'].includes(state)||entries.some(x=>['EXISTS_DIFFERENT','MERGE_REQUIRED'].includes(x.action))||['DIRTY_CONFLICTING','DIRTY_AMBIGUOUS'].includes(git.dirty)};
+  const git=await gitInfo(root,state==='GOVERNANCE_INSTALLED'?[]:entries);
+  const upstreamOwned=path=>path.startsWith('governance/') && path!=='governance/manifest.yaml' || path.startsWith('tooling/governance/');
+  const versionChanged=state==='GOVERNANCE_INSTALLED' && YAML.parse(await readFile(resolve(root,'governance/manifest.yaml'),'utf8')).governance_version!==YAML.parse(await readFile(resolve(templateRoot,'governance/manifest.yaml'),'utf8')).governance_version;
+  const upgrade_review_required=state==='GOVERNANCE_INSTALLED' && (versionChanged || entries.some(x=>x.action==='UPSTREAM_MISSING_LOCALLY' || x.action==='EXISTS_DIFFERENT' && upstreamOwned(x.path)));
+  const note=state==='GOVERNANCE_INSTALLED'?upgrade_review_required?'Installed snapshot recognized; upstream differences require explicit upgrade review. Init will not modify files.':'Installed snapshot recognized; init will not modify files.':null;
+  return {mode,target:root,presence:state,git,entries,upgrade_review_required,note,blocked:state==='GOVERNANCE_INSTALLED'?false:['PARTIAL_GOVERNANCE','GOVERNANCE_UNKNOWN'].includes(state)||entries.some(x=>['EXISTS_DIFFERENT','MERGE_REQUIRED'].includes(x.action))||['DIRTY_CONFLICTING','DIRTY_AMBIGUOUS'].includes(git.dirty)};
 }
-export async function applyInit(target,mode) {
-  const plan=await planInit(target,mode); // fresh preflight on every apply
+export async function applyInit(target,mode,templateRoot=upstream) {
+  const plan=await planInit(target,mode,templateRoot); // fresh preflight on every apply
+  if(plan.presence==='GOVERNANCE_INSTALLED')return {...plan,result:'ALREADY_INSTALLED',created:[]};
   if(['PARTIAL_GOVERNANCE','GOVERNANCE_UNKNOWN'].includes(plan.presence))return {...plan,result:'RECOVERY_REQUIRED'};
   if(plan.blocked) return { ...plan,result:'CONFLICTED' };
   const created=[];
@@ -81,7 +115,7 @@ export async function applyInit(target,mode) {
       const dest=resolve(plan.target,entry.path);
       await mkdir(dirname(dest),{recursive:true});
       // Exclusive creation protects an intervening user file.
-      await writeFile(dest,await readFile(resolve(upstream,entry.path)),{flag:'wx'});
+      await writeFile(dest,await readFile(resolve(templateRoot,entry.path)),{flag:'wx'});
       created.push(entry.path);
     }
     for(const folder of ['governance/constraints','canon/decisions','canon/constraints','canon/open-questions','work/tasks','work/reports']) await mkdir(resolve(plan.target,folder),{recursive:true});
