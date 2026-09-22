@@ -99,6 +99,18 @@ test('structured collection symlink outside root is rejected before discovery',a
     assert.ok(!result.findings.some(x=>x.record_id==='D-001'));
   }); } finally { await rm(outside,{recursive:true,force:true}); }
 });
+test('structured record file symlink outside root is rejected',async t=>{
+  const outside=await mkdtemp(join(tmpdir(),'governance-record-outside-'));
+  try { await fixture(async root=>{
+    const external=join(outside,'D-001.md'),target=join(root,'canon/decisions/D-001.md');
+    await writeFile(external,decision());
+    try { await symlink(external,target,'file'); }
+    catch(e) { if(['EPERM','EACCES','ENOTSUP'].includes(e.code)){t.skip(`file symlink unavailable: ${e.code}`);return;} throw e; }
+    const result=await checkGovernance(root);
+    assert.ok(result.findings.some(x=>x.rule_id==='GOV-SCHEMA-PATH' && x.file==='canon/decisions/D-001.md'));
+    assert.ok(!result.findings.some(x=>x.record_id==='D-001'));
+  }); } finally { await rm(outside,{recursive:true,force:true}); }
+});
 test('linked bootstrap schema directory outside root is rejected',async t=>{
   const outside=await mkdtemp(join(tmpdir(),'governance-schemas-outside-'));
   try { await fixture(async root=>{

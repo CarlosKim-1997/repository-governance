@@ -1,0 +1,50 @@
+name: Verify Governance
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Show runtimes
+        run: |
+          node --version
+          python --version
+      - run: npm ci
+      - run: npm run build
+      - name: Run suite and prove Linux symlink cases executed
+        run: |
+          npm test | tee "$RUNNER_TEMP/node-test.log"
+          grep -Fx '# skipped 0' "$RUNNER_TEMP/node-test.log"
+          grep -E '^ok [0-9]+ - authoritative bootstrap symlinks cannot escape the repository$' "$RUNNER_TEMP/node-test.log"
+          grep -E '^ok [0-9]+ - structured record file symlink outside root is rejected$' "$RUNNER_TEMP/node-test.log"
+      - run: node template/tooling/governance/check.mjs template
+      - run: npm run release:manifest
+      - name: Verify unrelated Python consumer after installation
+        run: |
+          consumer="$(mktemp -d)"
+          trap 'rm -rf "$consumer"' EXIT
+          cp -a tests/fixtures/python-utility/. "$consumer/"
+          node tooling/init/init.mjs init --greenfield --target "$consumer" --apply
+          node "$consumer/tooling/governance/check.mjs" "$consumer"
+          (cd "$consumer" && python -m unittest discover -s tests -v)
+      - name: Check tracked source remains clean
+        run: |
+          git diff --check
+          git status --short
+          test -z "$(git status --porcelain)"

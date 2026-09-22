@@ -10,6 +10,20 @@ import { planInit, applyInit, recognitionProfiles } from '../../tooling/init/ini
 const exec=promisify(execFile);
 async function fixture(fn){const root=await mkdtemp(join(tmpdir(),'governance-init-'));try{await fn(root)}finally{await rm(root,{recursive:true,force:true})}}
 
+test('published Governance 1.0 recognition contract is unchanged',()=>{
+  // Independent golden values: never derive these from the installer or template.
+  assert.deepEqual(recognitionProfiles['1.0.0'],{
+    requiredLandmarks:[
+      'AGENTS.md','governance/README.md','governance/manifest.yaml','governance/SPEC.md',
+      'governance/schemas/decision-v1.md','governance/schemas/constraint-v1.md',
+      'governance/schemas/open-question-v1.md','governance/schemas/task-v1.md',
+      'governance/schemas/state-v1.md','canon/principles/PROJECT.md',
+      'tooling/governance/check.mjs','tooling/governance/version.json'
+    ],
+    supportedSchemas:['decision/v1','constraint/v1','open-question/v1','task/v1','state/v1']
+  });
+});
+
 test('plan-only empty Greenfield, apply, idempotency and offline checker',async()=>fixture(async root=>{
   const plan=await planInit(root,'greenfield');
   assert.equal(plan.presence,'NO_GOVERNANCE');assert.equal(plan.blocked,false);
