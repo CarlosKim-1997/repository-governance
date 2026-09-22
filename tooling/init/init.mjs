@@ -44,12 +44,11 @@ async function gitInfo(target, entries) {
   } catch { if(inside) dirty='DIRTY_AMBIGUOUS'; }
   return {inside,branch,head,dirty,worktrees};
 }
-function presence(targets) {
-  const known=['AGENTS.md','governance/manifest.yaml','governance/SPEC.md','tooling/governance/check.mjs'];
-  const count=known.filter(x=>targets.get(x)).length;
-  if(count===0)return 'NO_GOVERNANCE';
-  if(count===known.length)return 'GOVERNANCE_INSTALLED';
-  return 'PARTIAL_GOVERNANCE';
+function presence(targets, signals) {
+  const specific=['governance/manifest.yaml','governance/SPEC.md','tooling/governance/check.mjs'];
+  if(specific.some(x=>targets.get(x))) return [...targets.values()].every(Boolean)?'GOVERNANCE_INSTALLED':'PARTIAL_GOVERNANCE';
+  if(signals.governance && (signals.tooling || signals.state))return 'GOVERNANCE_UNKNOWN';
+  return 'NO_GOVERNANCE';
 }
 export async function planInit(target, mode) {
   if(!['greenfield','brownfield'].includes(mode))throw new Error('explicit --greenfield or --brownfield required');
@@ -66,15 +65,14 @@ export async function planInit(target, mode) {
     }
     entries.push({path:rel,action});
   }
-  const markers=['governance','canon','work','tooling/governance'];
-  const found=await Promise.all(markers.map(x=>present(resolve(root,x))));
-  let state=presence(existing);
-  if(state==='NO_GOVERNANCE' && found.some(Boolean))state='GOVERNANCE_UNKNOWN';
+  const signals={governance:!!await present(resolve(root,'governance')),tooling:!!await present(resolve(root,'tooling/governance')),state:!!await present(resolve(root,'canon/state/current.md'))};
+  const state=presence(existing,signals);
   const git=await gitInfo(root,entries);
-  return {mode,target:root,presence:state,git,entries,blocked:entries.some(x=>['EXISTS_DIFFERENT','MERGE_REQUIRED'].includes(x.action))||['DIRTY_CONFLICTING','DIRTY_AMBIGUOUS'].includes(git.dirty)};
+  return {mode,target:root,presence:state,git,entries,blocked:['PARTIAL_GOVERNANCE','GOVERNANCE_UNKNOWN'].includes(state)||entries.some(x=>['EXISTS_DIFFERENT','MERGE_REQUIRED'].includes(x.action))||['DIRTY_CONFLICTING','DIRTY_AMBIGUOUS'].includes(git.dirty)};
 }
 export async function applyInit(target,mode) {
   const plan=await planInit(target,mode); // fresh preflight on every apply
+  if(['PARTIAL_GOVERNANCE','GOVERNANCE_UNKNOWN'].includes(plan.presence))return {...plan,result:'RECOVERY_REQUIRED'};
   if(plan.blocked) return { ...plan,result:'CONFLICTED' };
   const created=[];
   try {

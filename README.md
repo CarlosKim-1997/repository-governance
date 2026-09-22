@@ -15,7 +15,7 @@ node tooling/init/init.mjs init --greenfield --target /path/to/project
 node tooling/init/init.mjs init --greenfield --target /path/to/project --apply
 ```
 
-The first `init` is a read-only plan. `--apply` repeats preflight, refuses conflicting files, creates the snapshot, and invokes the installed checker. A Brownfield repository uses `--brownfield` in both commands; that installs a skeleton and leaves semantic adoption to [the Brownfield guide](adoption/BROWNFIELD.md). There is no broad `--force` overwrite.
+The first `init` is a read-only plan. `--apply` repeats preflight, refuses conflicting files, creates the snapshot, and invokes the installed checker. Partial or uncertain Governance presence blocks ordinary apply and requires deliberate recovery. A Brownfield repository uses `--brownfield` in both commands; that installs a skeleton and leaves semantic adoption to [the Brownfield guide](adoption/BROWNFIELD.md). There is no broad `--force` overwrite.
 
 The installed shape is:
 

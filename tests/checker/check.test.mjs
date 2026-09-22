@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cp, mkdtemp, readFile, writeFile, rm, mkdir } from 'node:fs/promises';
+import { cp, mkdtemp, readFile, writeFile, rm, mkdir, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { checkGovernance } from '../../tooling/check/check.mjs';
@@ -48,6 +48,7 @@ const cases=[
   ['Invariant overridable',async r=>put(r,'governance/constraints/c.md',constraint('INV-001','INVARIANT','overridable: true\n')),'GOV-SCHEMA-OVERRIDABLE'],
   ['forbidden relation',async r=>put(r,'work/tasks/t.md',task('T-001','supersedes: [T-002]\n')),'GOV-REL-FORBIDDEN'],
   ['reverse alias',async r=>put(r,'canon/decisions/d.md',decision('D-001','blocks: [T-001]\n')),'GOV-REL-REVERSE'],
+  ['reverse resolved alias',async r=>put(r,'canon/decisions/d.md',decision('D-001','resolved: D-002\n')),'GOV-REL-REVERSE'],
   ['invalid resolved_by list',async r=>put(r,'canon/open-questions/o.md',oq('OQ-001','RESOLVED','resolved_by: [D-001]\n')),'GOV-REL-RESOLUTION'],
   ['unsupported Evidence',async r=>put(r,'canon/open-questions/o.md',oq('OQ-001','RESOLVED','resolved_by: E-001\n')),'GOV-REL-RESOLUTION'],
   ['multiple State',async r=>cp(join(r,'canon/state/current.md'),join(r,'canon/state/old.md')),'GOV-STATE-SECOND'],
@@ -56,8 +57,56 @@ const cases=[
 for(const [name,change,rule] of cases)test(name,async()=>fixture(async root=>{await change(root);assert.ok((await rules(root)).includes(rule),name)}));
 
 test('valid supersession and resolved OQ',async()=>fixture(async root=>{
-  await put(root,'canon/decisions/old.md',decision('D-001'));
+  await put(root,'canon/decisions/old.md',decision('D-001').replace('status: ACTIVE','status: SUPERSEDED'));
   await put(root,'canon/decisions/new.md',decision('D-002','supersedes: [D-001]\n'));
   await put(root,'canon/open-questions/o.md',oq('OQ-001','RESOLVED','resolved_by: D-002\n'));
   assert.equal((await checkGovernance(root)).level,'PASS');
 }));
+test('ACTIVE Decision cannot supersede an ACTIVE Decision',async()=>fixture(async root=>{
+  await put(root,'canon/decisions/old.md',decision('D-001'));
+  await put(root,'canon/decisions/new.md',decision('D-002','supersedes: [D-001]\n'));
+  assert.ok((await rules(root)).includes('GOV-LIFE-SUPERSESSION'));
+}));
+test('ACTIVE Constraint requires a SUPERSEDED Constraint target',async()=>fixture(async root=>{
+  await put(root,'canon/constraints/old.md',constraint('C-001'));
+  await put(root,'canon/constraints/new.md',constraint('C-002','HARD_CONSTRAINT','supersedes: [C-001]\n'));
+  assert.ok((await rules(root)).includes('GOV-LIFE-SUPERSESSION'));
+  await edit(root,'canon/constraints/old.md',s=>s.replace('status: ACTIVE','status: SUPERSEDED'));
+  assert.equal((await checkGovernance(root)).level,'PASS');
+}));
+test('authoritative bootstrap symlinks cannot escape the repository',async t=>{
+  const outside=await mkdtemp(join(tmpdir(),'governance-outside-'));
+  try { await fixture(async root=>{
+    for(const path of ['AGENTS.md','governance/manifest.yaml','governance/schemas/decision-v1.md','tooling/governance/check.mjs']){
+      const target=join(root,path),external=join(outside,path.replaceAll('/','-'));
+      await cp(target,external);await rm(target);
+      try { await symlink(external,target,'file'); }
+      catch(e) { if(['EPERM','EACCES','ENOTSUP'].includes(e.code)){t.skip(`file symlink unavailable: ${e.code}`);return;} throw e; }
+      assert.ok((await rules(root)).includes('GOV-BOOT-ESCAPE'),path);
+      await rm(target);await cp(external,target);
+    }
+  }); } finally { await rm(outside,{recursive:true,force:true}); }
+});
+test('structured collection symlink outside root is rejected before discovery',async t=>{
+  const outside=await mkdtemp(join(tmpdir(),'governance-records-outside-'));
+  try { await fixture(async root=>{
+    await put(outside,'d.md',decision());
+    const target=join(root,'canon/decisions');await rm(target,{recursive:true,force:true});
+    try { await symlink(outside,target,'junction'); }
+    catch(e) { if(['EPERM','EACCES','ENOTSUP'].includes(e.code)){t.skip(`directory link unavailable: ${e.code}`);return;} throw e; }
+    const result=await checkGovernance(root);
+    assert.ok(result.findings.some(x=>x.rule_id==='GOV-SCHEMA-PATH' && x.file==='canon/decisions'));
+    assert.ok(!result.findings.some(x=>x.record_id==='D-001'));
+  }); } finally { await rm(outside,{recursive:true,force:true}); }
+});
+test('linked bootstrap schema directory outside root is rejected',async t=>{
+  const outside=await mkdtemp(join(tmpdir(),'governance-schemas-outside-'));
+  try { await fixture(async root=>{
+    const target=join(root,'governance/schemas');
+    await cp(target,outside,{recursive:true});await rm(target,{recursive:true,force:true});
+    try { await symlink(outside,target,'junction'); }
+    catch(e) { if(['EPERM','EACCES','ENOTSUP'].includes(e.code)){t.skip(`directory link unavailable: ${e.code}`);return;} throw e; }
+    const result=await checkGovernance(root);
+    assert.ok(result.findings.some(x=>x.rule_id==='GOV-BOOT-ESCAPE' && x.file==='governance/schemas/decision-v1.md'));
+  }); } finally { await rm(outside,{recursive:true,force:true}); }
+});

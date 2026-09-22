@@ -1,6 +1,6 @@
 # Repository Governance 1.0.0
 
-This file is the single normative source for the reusable protocol. Project Canon supplies project-specific truth. Schema summaries and adoption guides derive from this file.
+This SPEC is the semantic authority for the reusable protocol. The five schema files are compact normative structural references derived from it and must remain consistent with it. Adoption guides provide procedural guidance. Project Canon supplies project-specific truth.
 
 ## Part I — Core Rules
 
@@ -22,7 +22,7 @@ Handoffs pass actionable state and verification basis, not hidden reasoning. Rep
 
 ### A. Governance Model
 
-Owner Authority is human. Delegated Authority is bounded execution permission. Implementation Judgment covers reversible choices within that scope. A choice future workers must preserve after a rewrite may need durable normative treatment. Authority precedence, after applicability is established: Governance Invariant; applicable Governance Hard Constraint; applicable Project Hard Constraint; human-ratified active Decision; Task restriction; guidance. A Task may narrow but never widen authority. Human approval of one action does not imply another.
+Owner Authority is human. Delegated Authority is bounded execution permission. Implementation Judgment covers reversible choices within that scope. A choice future workers must preserve after a rewrite may need durable normative treatment. Governance Invariants are absolute. Applicable Hard Constraints remain binding unless Governance permits a scoped exception and a valid human-ratified Decision provides it within its declared scope. Ordinary Decisions operate inside applicable Constraints. A Task may narrow delegated execution but cannot widen normative authority or defeat applicable Governance or Canon. Human approval of one action does not imply another.
 
 ### B. Bootstrap and Discovery
 
@@ -32,7 +32,7 @@ Root `AGENTS.md` is a small router and must not duplicate mutable State, Task de
 
 `canon/principles/PROJECT.md` is prose, may initially contain no Principles, and has no formal schema or IDs. Recommended prose lifecycle is ACTIVE, SUPERSEDED, RETIRED. Principles are not relation targets. Decision records in `canon/decisions/` use `decision/v1`, ID `D-[0-9]+`, statuses PROPOSED, APPROVED, ACTIVE, SUPERSEDED, REJECTED, DEFERRED, and headings Decision, Context, Rationale, Consequences. Vague positivity is not ratification. A material change to an ACTIVE Decision creates a new Decision.
 
-Constraint records use `constraint/v1`, headings Constraint, Rationale, Operational Effect, and statuses ACTIVE, SUPERSEDED, RETIRED. Governance constraints live in `governance/constraints/`; Project constraints in `canon/constraints/`. `INV-[0-9]+` requires kind INVARIANT and Governance location. `C-[0-9]+` requires kind HARD_CONSTRAINT. Project Invariants are forbidden. Optional `overridable` defaults false and must be boolean. Invariants cannot be overridable. No proposed Constraint object exists: retain proposals outside active Constraint Canon until ratified. A narrow exception may be an explicit Decision only for a Hard Constraint with `overridable: true`; it must state scope, reason, validity, and compensating conditions where applicable. It does not supersede the Constraint. There is no waiver or override schema.
+Constraint records use `constraint/v1`, headings Constraint, Rationale, Operational Effect, and statuses ACTIVE, SUPERSEDED, RETIRED. Governance constraints live in `governance/constraints/`; Project constraints in `canon/constraints/`. `INV-[0-9]+` requires kind INVARIANT and Governance location. `C-[0-9]+` requires kind HARD_CONSTRAINT. Project Invariants are forbidden. Optional `overridable` defaults false and must be boolean. Invariants cannot be overridable. No proposed Constraint object exists: retain proposals outside active Constraint Canon until ratified. An ACTIVE Decision or Constraint with `supersedes` points to a SUPERSEDED target. A narrow exception may be an explicit Decision only for a Hard Constraint with `overridable: true`; it must state scope, reason, validity, and compensating conditions where applicable. It does not supersede the Constraint. There is no waiver or override schema.
 
 Open Questions in `canon/open-questions/` use `open-question/v1`, IDs `OQ-[0-9]+`, statuses OPEN, BLOCKING, RESOLVED, DROPPED, and headings Question, Why It Matters. They record material future-relevant uncertainty, not a backlog. BLOCKING identifies specific blocked work, not necessarily the whole project. RESOLVED and DROPPED are terminal. `resolved_by` is a scalar Decision ID, required for RESOLVED, forbidden for OPEN/BLOCKING, optional for DROPPED. Evidence IDs are unsupported in v1.
 
@@ -54,7 +54,7 @@ Reject cycles in `depends_on`, combined Task execution edges (`depends_on` and T
 
 ### F. Verification and Evidence
 
-There is no `evidence/v1` or `E-*` object in v1. Evidence may be static, executable, integration, external, or human acceptance support in prose. Verification gates are UNVERIFIED, SATISFIED, FAILED, or BLOCKED as conceptual report language, not a new object lifecycle. Bind claims to exact artifact, command, environment, and observation; material changes invalidate earlier evidence. Checker PASS never proves semantic correctness.
+There is no `evidence/v1` or `E-*` object in v1. Evidence may be static, executable, integration, external, or human acceptance support in prose. Verification gates are UNVERIFIED, SATISFIED, NOT_SATISFIED, or BLOCKED as conceptual report language, not a new object lifecycle. Bind claims to exact artifact, command, environment, and observation; material changes invalidate earlier evidence. Checker PASS never proves semantic correctness.
 
 ### G. Concurrency and Mutation Safety
 

@@ -12,7 +12,7 @@ const definitions = {
   'state/v1': { roots: ['canon/state'], statuses: ['NOT_READY','READY','IN_PROGRESS','BLOCKED','VERIFYING','COMPLETE','CANCELLED'], headings: ['Current Position','Active Work','Blockers','Material Risks','Verification Basis'], relations: [] }
 };
 const relationKeys = ['depends_on','blocked_by','supersedes','implements','related_to','resolved_by'];
-const reverseKeys = ['blocks','superseded_by','implemented_by','depended_on_by','replaced_by'];
+const reverseKeys = ['blocks','superseded_by','implemented_by','depended_on_by','replaced_by','resolved'];
 const manifestKeys = ['schema','governance_version','areas','current_state','supported_schemas'];
 const commonKeys = ['schema','id','status','areas',...relationKeys];
 const idRegex = /^(D|INV|C|OQ|T)-[0-9]+$/;
@@ -72,14 +72,20 @@ function detectCycles(items, edges, rule, add) {
 
 export async function checkGovernance(base = process.cwd()) {
   const root = resolve(base);
+  const realRoot = await realpath(root);
+  const insideRoot = path => path === realRoot || path.startsWith(realRoot+sep);
   const findings = [];
   const add = (severity,rule_id,file,message,record_id, target) => findings.push({severity,rule_id,file,record_id:record_id ?? null,message,target:target ?? null});
   const absolute = p => resolve(root,p);
   const exists = async p => { try { await stat(absolute(p)); return true; } catch(e) { if(e.code==='ENOENT') return false; throw e; } };
   const required = ['AGENTS.md','governance/README.md','governance/manifest.yaml','governance/SPEC.md','canon/principles/PROJECT.md',...Object.keys(definitions).map(s=>`governance/schemas/${s.replace('/','-')}.md`),'tooling/governance/check.mjs','tooling/governance/version.json'];
-  for (const p of required) if (!await exists(p)) add('ERROR','GOV-BOOT-MISSING',p,'missing bootstrap file');
+  const unsafeRequired=new Set();
+  for (const p of required) {
+    if (!await exists(p)) add('ERROR','GOV-BOOT-MISSING',p,'missing bootstrap file');
+    else if (!insideRoot(await realpath(absolute(p)))) { add('ERROR','GOV-BOOT-ESCAPE',p,'authoritative bootstrap file escapes repository'); unsafeRequired.add(p); }
+  }
   let manifest = null;
-  if (await exists('governance/manifest.yaml')) manifest = parseYaml(await readFile(absolute('governance/manifest.yaml'),'utf8'),'governance/manifest.yaml',add);
+  if (!unsafeRequired.has('governance/manifest.yaml') && await exists('governance/manifest.yaml')) manifest = parseYaml(await readFile(absolute('governance/manifest.yaml'),'utf8'),'governance/manifest.yaml',add);
   if (manifest) {
     for (const key of manifestKeys) if (!has(manifest,key)) add('ERROR','GOV-MANIFEST-REQUIRED','governance/manifest.yaml',`missing ${key}`);
     for (const key of Object.keys(manifest)) if (!manifestKeys.includes(key)) add('ERROR','GOV-MANIFEST-UNKNOWN','governance/manifest.yaml',`unknown field ${key}`);
@@ -89,20 +95,24 @@ export async function checkGovernance(base = process.cwd()) {
     const p = manifest.current_state;
     if (typeof p !== 'string' || !/^canon\/state\/[A-Za-z0-9._-]+\.md$/.test(p) || p.includes('..') || !relative(root,absolute(p)) || relative(root,absolute(p)).startsWith('..'+sep)) add('ERROR','GOV-MANIFEST-STATE','governance/manifest.yaml','current_state must be a repository-local Markdown file in canon/state');
     else if (await exists(p)) {
-      const realRoot=await realpath(root), realState=await realpath(absolute(p));
-      if (realState !== realRoot && !realState.startsWith(realRoot+sep)) add('ERROR','GOV-MANIFEST-STATE','governance/manifest.yaml','current_state escapes repository');
+      const realState=await realpath(absolute(p));
+      if (!insideRoot(realState)) add('ERROR','GOV-MANIFEST-STATE','governance/manifest.yaml','current_state escapes repository');
     }
   }
   const discovered=[];
   for (const def of Object.values(definitions)) for (const folder of def.roots) {
+    let realFolder;
+    try { realFolder=await realpath(absolute(folder)); } catch(e) { if(e.code==='ENOENT')continue; throw e; }
+    if (!insideRoot(realFolder)) { add('ERROR','GOV-SCHEMA-PATH',folder,'structured collection escapes repository'); continue; }
     let entries=[]; try { entries=await readdir(absolute(folder),{withFileTypes:true}); } catch(e) { if(e.code!=='ENOENT') throw e; }
     for (const e of entries) if (e.name.endsWith('.md') && (e.isFile() || e.isSymbolicLink())) discovered.push(`${folder}/${e.name}`);
   }
   discovered.sort();
   const items=[], ids=new Map();
   for (const path of discovered) {
-    const realRoot=await realpath(root), realFile=await realpath(absolute(path));
-    if (!realFile.startsWith(realRoot+sep)) { add('ERROR','GOV-SCHEMA-PATH',path,'record escapes repository'); continue; }
+    let realFile;
+    try { realFile=await realpath(absolute(path)); } catch(e) { if(e.code==='ENOENT') { add('ERROR','GOV-SCHEMA-PATH',path,'record link target is missing'); continue; } throw e; }
+    if (!insideRoot(realFile)) { add('ERROR','GOV-SCHEMA-PATH',path,'record escapes repository'); continue; }
     const parsed=parseRecord(await readFile(absolute(path),'utf8'),path,add);
     if (!parsed) continue;
     const {data,body}=parsed, def=definitions[data.schema];
@@ -149,6 +159,7 @@ export async function checkGovernance(base = process.cwd()) {
       const target=byId.get(ref);
       if (!target) add('ERROR','GOV-REL-MISSING',item.path,`unresolved ${key} target ${ref}`,item.data.id,ref);
       else if (!allowedTarget(item,key,target)) add('ERROR','GOV-REL-TARGET',item.path,`forbidden ${key} target ${ref}`,item.data.id,ref);
+      else if (key==='supersedes' && item.data.status==='ACTIVE' && ['decision/v1','constraint/v1'].includes(item.data.schema) && target.data.status!=='SUPERSEDED') add('ERROR','GOV-LIFE-SUPERSESSION',item.path,`ACTIVE record supersedes ${ref}, which is ${target.data.status} rather than SUPERSEDED`,item.data.id,ref);
     }
   }
   for (const [key,rule] of [['depends_on','GOV-GRAPH-DEPENDS'],['supersedes','GOV-GRAPH-SUPERSEDES'],['implements','GOV-GRAPH-IMPLEMENTS']]) {

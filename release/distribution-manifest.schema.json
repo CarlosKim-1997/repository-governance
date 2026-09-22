@@ -9,7 +9,7 @@
     "distribution_version": {"type":"string"},
     "governance_version": {"type":"string"},
     "checker_version": {"type":"string"},
-    "source_commit": {"type":"string"},
+    "source_commit": {"type":"string","pattern":"^(DEVELOPMENT_WORKTREE|[0-9a-f]{40})$"},
     "artifacts": {"type":"array","items":{"type":"object","additionalProperties":false,"required":["path","class","ownership","sha256"],"properties":{"path":{"type":"string"},"class":{"enum":["NORMATIVE","TEMPLATE","TOOLING","GUIDANCE","GENERATED"]},"ownership":{"enum":["UPSTREAM_OWNED","PROJECT_OWNED","MIXED","GENERATED"]},"sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"}}}}
   }
 }

@@ -16,7 +16,8 @@ try {
     if(!content.includes(oldValue))throw new Error(`expected text absent: ${path}`);
     await writeFile(file,content.replace(oldValue,newValue));
   };
-  await update('canon/decisions/D-018.md','implements: [C-003]\n','');
+  // This relation is a semantic hypothesis for a disposable check, not a migration decision.
+  await update('canon/decisions/D-018.md','implements: [C-003]','depends_on: [C-003]');
   await update('canon/open-questions/OQ-001.md','resolved_by: [D-018]','resolved_by: D-018');
   await update('canon/state/current.md','areas: [global, analytics, privacy, identity]','areas: [global]');
   const result=await checkGovernance(root);

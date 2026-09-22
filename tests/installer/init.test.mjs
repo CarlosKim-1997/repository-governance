@@ -57,7 +57,22 @@ test('partial installation gets recovery plan',async()=>fixture(async root=>{
   const source=await readFile(new URL('../../template/governance/manifest.yaml',import.meta.url));
   await writeFile(join(root,'governance/manifest.yaml'),source);
   const plan=await planInit(root,'greenfield');assert.equal(plan.presence,'PARTIAL_GOVERNANCE');
+  assert.equal(plan.blocked,true);
   assert.equal(plan.entries.find(x=>x.path==='governance/manifest.yaml').action,'EXISTS_IDENTICAL');
+  assert.equal((await applyInit(root,'greenfield')).result,'RECOVERY_REQUIRED');
+  assert.deepEqual(await readFile(join(root,'governance/manifest.yaml')),source);
+  await assert.rejects(readFile(join(root,'AGENTS.md')));
+}));
+test('unknown Governance signals block apply without filling files',async()=>fixture(async root=>{
+  await mkdir(join(root,'governance'),{recursive:true});
+  await mkdir(join(root,'tooling/governance'),{recursive:true});
+  const plan=await planInit(root,'brownfield');assert.equal(plan.presence,'GOVERNANCE_UNKNOWN');assert.equal(plan.blocked,true);
+  assert.equal((await applyInit(root,'brownfield')).result,'RECOVERY_REQUIRED');
+  await assert.rejects(readFile(join(root,'AGENTS.md')));
+}));
+test('generic work and canon directories are not Governance signals',async()=>fixture(async root=>{
+  await mkdir(join(root,'work'),{recursive:true});await mkdir(join(root,'canon'),{recursive:true});
+  const plan=await planInit(root,'greenfield');assert.equal(plan.presence,'NO_GOVERNANCE');assert.equal(plan.blocked,false);
   assert.equal((await applyInit(root,'greenfield')).result,'INSTALLED_VERIFIED');
 }));
 test('dirty nonconflicting Git tree does not prevent install',async()=>fixture(async root=>{
