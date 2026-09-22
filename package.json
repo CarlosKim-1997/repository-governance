@@ -1,0 +1,15 @@
+{
+  "name": "repository-governance",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "node tooling/build.mjs",
+    "test": "node --test tests/checker/check.test.mjs tests/installer/init.test.mjs tests/release/release.test.mjs",
+    "check:template": "node template/tooling/governance/check.mjs template",
+    "release:manifest": "node tooling/release-manifest.mjs"
+  },
+  "dependencies": { "yaml": "^2.8.1" },
+  "devDependencies": { "esbuild": "^0.25.10" }
+}

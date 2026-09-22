@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Repository Governance distribution manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","distribution_version","governance_version","checker_version","source_commit","artifacts"],
+  "properties": {
+    "schema": {"const":"governance-distribution-manifest/v1"},
+    "distribution_version": {"type":"string"},
+    "governance_version": {"type":"string"},
+    "checker_version": {"type":"string"},
+    "source_commit": {"type":"string"},
+    "artifacts": {"type":"array","items":{"type":"object","additionalProperties":false,"required":["path","class","ownership","sha256"],"properties":{"path":{"type":"string"},"class":{"enum":["NORMATIVE","TEMPLATE","TOOLING","GUIDANCE","GENERATED"]},"ownership":{"enum":["UPSTREAM_OWNED","PROJECT_OWNED","MIXED","GENERATED"]},"sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"}}}}
+  }
+}
