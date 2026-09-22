@@ -104,6 +104,7 @@ test('structured record file symlink outside root is rejected',async t=>{
   try { await fixture(async root=>{
     const external=join(outside,'D-001.md'),target=join(root,'canon/decisions/D-001.md');
     await writeFile(external,decision());
+    await mkdir(join(root,'canon/decisions'),{recursive:true});
     try { await symlink(external,target,'file'); }
     catch(e) { if(['EPERM','EACCES','ENOTSUP'].includes(e.code)){t.skip(`file symlink unavailable: ${e.code}`);return;} throw e; }
     const result=await checkGovernance(root);
