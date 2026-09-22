@@ -43,7 +43,7 @@ Read `AGENTS.md`, manifest, Part I of the SPEC, the Current State, applicable ac
 
 ## Versions and upgrades
 
-Governance semantics target **1.0.0**. This distribution and its checker are **0.1.0 development**. Each project owns its copied snapshot and adopts upgrades explicitly. Core/schema/checker are generally upstream-owned, Canon and Work project-owned, while `AGENTS.md` and manifest are mixed. Compare the original snapshot, local copy, and target release before applying an upgrade. See [UPGRADE](adoption/UPGRADE.md).
+Governance semantics target **1.0.0**. This distribution and its checker are **0.1.0 development**. Each project owns its copied snapshot and adopts upgrades explicitly. Installed snapshots are recognized against the compatibility profile for their adopted Governance version, independent of the latest upstream template shape. Core/schema/checker are generally upstream-owned, Canon and Work project-owned, while `AGENTS.md` and manifest are mixed. Compare the original snapshot, local copy, and target release before applying an upgrade. See [UPGRADE](adoption/UPGRADE.md).
 
 ## Scope and limits
 

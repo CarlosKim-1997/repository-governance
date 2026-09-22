@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { planInit, applyInit } from '../../tooling/init/init.mjs';
+import { planInit, applyInit, recognitionProfiles } from '../../tooling/init/init.mjs';
 
 const exec=promisify(execFile);
 async function fixture(fn){const root=await mkdtemp(join(tmpdir(),'governance-init-'));try{await fn(root)}finally{await rm(root,{recursive:true,force:true})}}
@@ -16,6 +16,8 @@ test('plan-only empty Greenfield, apply, idempotency and offline checker',async(
   assert.ok(plan.entries.every(x=>x.action==='CREATE'));
   const applied=await applyInit(root,'greenfield');assert.equal(applied.result,'INSTALLED_VERIFIED');
   assert.equal(applied.check.exit,0);
+  assert.ok(Object.isFrozen(recognitionProfiles['1.0.0']));
+  assert.ok(Object.isFrozen(recognitionProfiles['1.0.0'].requiredLandmarks));
   assert.equal((await planInit(root,'greenfield')).presence,'GOVERNANCE_INSTALLED');
   const second=await applyInit(root,'greenfield');assert.equal(second.result,'ALREADY_INSTALLED');
   assert.equal(second.created.length,0);
@@ -62,6 +64,51 @@ test('older installed snapshot is not filled from a grown upstream template',asy
     await assert.rejects(readFile(join(root,'governance/new-upstream-note.md')));
     assert.notEqual(await readFile(join(root,'governance/SPEC.md'),'utf8'),'Updated upstream Core.\n');
   } finally { await rm(newer,{recursive:true,force:true}); }
+}));
+test('a simulated stricter future profile does not redefine a 1.0 snapshot',async()=>fixture(async root=>{
+  assert.equal((await applyInit(root,'greenfield')).result,'INSTALLED_VERIFIED');
+  const profiles={...recognitionProfiles,'1.1.0':{
+    requiredLandmarks:[...recognitionProfiles['1.0.0'].requiredLandmarks,'governance/future-required.md'],
+    supportedSchemas:[...recognitionProfiles['1.0.0'].supportedSchemas]
+  }};
+  const plan=await planInit(root,'greenfield',undefined,profiles);
+  assert.equal(plan.presence,'GOVERNANCE_INSTALLED');
+  assert.equal(plan.blocked,false);
+  assert.equal(plan.upgrade_review_required,false);
+  assert.equal((await applyInit(root,'greenfield',undefined,profiles)).result,'ALREADY_INSTALLED');
+  await assert.rejects(readFile(join(root,'governance/future-required.md')));
+}));
+test('unsupported installed version is unknown and apply does not mutate it',async()=>fixture(async root=>{
+  assert.equal((await applyInit(root,'greenfield')).result,'INSTALLED_VERIFIED');
+  const manifestPath=join(root,'governance/manifest.yaml'), versionPath=join(root,'tooling/governance/version.json');
+  const manifest=(await readFile(manifestPath,'utf8')).replace('governance_version: 1.0.0','governance_version: 9.9.9');
+  const version=(await readFile(versionPath,'utf8')).replace('"governance_version": "1.0.0"','"governance_version": "9.9.9"');
+  await writeFile(manifestPath,manifest);await writeFile(versionPath,version);
+  const plan=await planInit(root,'greenfield');
+  assert.equal(plan.presence,'GOVERNANCE_UNKNOWN');assert.equal(plan.blocked,true);
+  assert.match(plan.note,/version 9\.9\.9 safely/);
+  assert.equal((await applyInit(root,'greenfield')).result,'RECOVERY_REQUIRED');
+  assert.equal(await readFile(manifestPath,'utf8'),manifest);
+  assert.equal(await readFile(versionPath,'utf8'),version);
+}));
+test('manifest and version.json disagreement is not installed',async()=>fixture(async root=>{
+  assert.equal((await applyInit(root,'greenfield')).result,'INSTALLED_VERIFIED');
+  const path=join(root,'tooling/governance/version.json');
+  const version=(await readFile(path,'utf8')).replace('"governance_version": "1.0.0"','"governance_version": "1.1.0"');
+  await writeFile(path,version);
+  const plan=await planInit(root,'greenfield');
+  assert.equal(plan.presence,'PARTIAL_GOVERNANCE');assert.equal(plan.blocked,true);
+  assert.equal((await applyInit(root,'greenfield')).result,'RECOVERY_REQUIRED');
+  assert.equal(await readFile(path,'utf8'),version);
+}));
+test('missing required 1.0 schema landmark is partial',async()=>fixture(async root=>{
+  assert.equal((await applyInit(root,'greenfield')).result,'INSTALLED_VERIFIED');
+  const path=join(root,'governance/schemas/task-v1.md');
+  await rm(path);
+  const plan=await planInit(root,'greenfield');
+  assert.equal(plan.presence,'PARTIAL_GOVERNANCE');assert.equal(plan.blocked,true);
+  assert.equal((await applyInit(root,'greenfield')).result,'RECOVERY_REQUIRED');
+  await assert.rejects(readFile(path));
 }));
 test('local Core modification remains installed and requires upgrade review',async()=>fixture(async root=>{
   assert.equal((await applyInit(root,'greenfield')).result,'INSTALLED_VERIFIED');

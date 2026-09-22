@@ -45,18 +45,27 @@ async function gitInfo(target, entries) {
   } catch { if(inside) dirty='DIRTY_AMBIGUOUS'; }
   return {inside,branch,head,dirty,worktrees};
 }
-const installedLandmarks=[
-  'AGENTS.md','governance/README.md','governance/manifest.yaml','governance/SPEC.md',
-  ...['decision','constraint','open-question','task','state'].map(x=>`governance/schemas/${x}-v1.md`),
-  'canon/principles/PROJECT.md','tooling/governance/check.mjs','tooling/governance/version.json'
-];
-async function installedPresence(root) {
+// Published recognition contracts are immutable: add a profile for a new
+// Governance version instead of changing an older version's required shape.
+export const recognitionProfiles=Object.freeze({
+  '1.0.0':Object.freeze({
+    requiredLandmarks:Object.freeze([
+      'AGENTS.md','governance/README.md','governance/manifest.yaml','governance/SPEC.md',
+      'governance/schemas/decision-v1.md','governance/schemas/constraint-v1.md',
+      'governance/schemas/open-question-v1.md','governance/schemas/task-v1.md',
+      'governance/schemas/state-v1.md','canon/principles/PROJECT.md',
+      'tooling/governance/check.mjs','tooling/governance/version.json'
+    ]),
+    supportedSchemas:Object.freeze(['decision/v1','constraint/v1','open-question/v1','task/v1','state/v1'])
+  })
+});
+async function installedPresence(root,profiles) {
   const specific=['governance/manifest.yaml','governance/SPEC.md','tooling/governance/check.mjs','tooling/governance/version.json'];
   if(!(await Promise.all(specific.map(x=>present(resolve(root,x))))).some(Boolean)) {
     const governance=!!await present(resolve(root,'governance'));
     const tooling=!!await present(resolve(root,'tooling/governance'));
     const state=!!await present(resolve(root,'canon/state/current.md'));
-    return governance && (tooling || state)?'GOVERNANCE_UNKNOWN':'NO_GOVERNANCE';
+    return {presence:governance && (tooling || state)?'GOVERNANCE_UNKNOWN':'NO_GOVERNANCE',note:null};
   }
   const realRoot=await realpath(root);
   const localFile=async path=>{
@@ -65,24 +74,29 @@ async function installedPresence(root) {
       return info.isFile() && (actual===realRoot || actual.startsWith(realRoot+sep));
     } catch(e) { if(e.code==='ENOENT')return false; throw e; }
   };
-  if(!(await Promise.all(installedLandmarks.map(localFile))).every(Boolean))return 'PARTIAL_GOVERNANCE';
+  if(!await localFile('governance/manifest.yaml'))return {presence:'PARTIAL_GOVERNANCE',note:null};
   try {
     const document=YAML.parseDocument(await readFile(resolve(root,'governance/manifest.yaml'),'utf8'),{uniqueKeys:true,strict:true});
-    if(document.errors.length)return 'PARTIAL_GOVERNANCE';
+    if(document.errors.length)return {presence:'PARTIAL_GOVERNANCE',note:null};
     const manifest=document.toJS();
+    if(manifest?.schema!=='governance-manifest/v1' || typeof manifest.governance_version!=='string' || !manifest.governance_version)
+      return {presence:'PARTIAL_GOVERNANCE',note:null};
+    const profile=Object.hasOwn(profiles,manifest.governance_version)?profiles[manifest.governance_version]:null;
+    if(!profile)return {presence:'GOVERNANCE_UNKNOWN',note:`Governance markers are present, but this installer does not know how to recognize version ${manifest.governance_version} safely.`};
+    if(!(await Promise.all(profile.requiredLandmarks.map(localFile))).every(Boolean))return {presence:'PARTIAL_GOVERNANCE',note:null};
     const version=JSON.parse(await readFile(resolve(root,'tooling/governance/version.json'),'utf8'));
-    if(manifest?.schema!=='governance-manifest/v1' || typeof manifest.governance_version!=='string' || !manifest.governance_version ||
-       !Array.isArray(manifest.areas) || !manifest.areas.includes('global') ||
-       !Array.isArray(manifest.supported_schemas) || !manifest.supported_schemas.length ||
+    if(!Array.isArray(manifest.areas) || !manifest.areas.includes('global') ||
+       !Array.isArray(manifest.supported_schemas) || manifest.supported_schemas.length!==profile.supportedSchemas.length ||
+       !profile.supportedSchemas.every(x=>manifest.supported_schemas.includes(x)) ||
        version?.governance_version!==manifest.governance_version ||
        typeof manifest.current_state!=='string' || !/^canon\/state\/[A-Za-z0-9._-]+\.md$/.test(manifest.current_state) || manifest.current_state.includes('..') ||
-       !await localFile(manifest.current_state))return 'PARTIAL_GOVERNANCE';
-  } catch { return 'PARTIAL_GOVERNANCE'; }
-  return 'GOVERNANCE_INSTALLED';
+       !await localFile(manifest.current_state))return {presence:'PARTIAL_GOVERNANCE',note:null};
+  } catch { return {presence:'PARTIAL_GOVERNANCE',note:null}; }
+  return {presence:'GOVERNANCE_INSTALLED',note:null};
 }
-export async function planInit(target, mode, templateRoot=upstream) {
+export async function planInit(target, mode, templateRoot=upstream, profiles=recognitionProfiles) {
   if(!['greenfield','brownfield'].includes(mode))throw new Error('explicit --greenfield or --brownfield required');
-  const root=resolve(target), listing=await files(templateRoot), state=await installedPresence(root), entries=[];
+  const root=resolve(target), listing=await files(templateRoot), identity=await installedPresence(root,profiles), state=identity.presence, entries=[];
   for(const rel of listing) {
     const destination=resolve(root,rel), pathRelative=relative(root,destination);
     if(pathRelative.startsWith('..'+sep)||pathRelative==='..')throw new Error('target path escapes repository');
@@ -100,11 +114,11 @@ export async function planInit(target, mode, templateRoot=upstream) {
   const upstreamOwned=path=>path.startsWith('governance/') && path!=='governance/manifest.yaml' || path.startsWith('tooling/governance/');
   const versionChanged=state==='GOVERNANCE_INSTALLED' && YAML.parse(await readFile(resolve(root,'governance/manifest.yaml'),'utf8')).governance_version!==YAML.parse(await readFile(resolve(templateRoot,'governance/manifest.yaml'),'utf8')).governance_version;
   const upgrade_review_required=state==='GOVERNANCE_INSTALLED' && (versionChanged || entries.some(x=>x.action==='UPSTREAM_MISSING_LOCALLY' || x.action==='EXISTS_DIFFERENT' && upstreamOwned(x.path)));
-  const note=state==='GOVERNANCE_INSTALLED'?upgrade_review_required?'Installed snapshot recognized; upstream differences require explicit upgrade review. Init will not modify files.':'Installed snapshot recognized; init will not modify files.':null;
+  const note=state==='GOVERNANCE_INSTALLED'?upgrade_review_required?'Installed snapshot recognized; upstream differences require explicit upgrade review. Init will not modify files.':'Installed snapshot recognized; init will not modify files.':identity.note;
   return {mode,target:root,presence:state,git,entries,upgrade_review_required,note,blocked:state==='GOVERNANCE_INSTALLED'?false:['PARTIAL_GOVERNANCE','GOVERNANCE_UNKNOWN'].includes(state)||entries.some(x=>['EXISTS_DIFFERENT','MERGE_REQUIRED'].includes(x.action))||['DIRTY_CONFLICTING','DIRTY_AMBIGUOUS'].includes(git.dirty)};
 }
-export async function applyInit(target,mode,templateRoot=upstream) {
-  const plan=await planInit(target,mode,templateRoot); // fresh preflight on every apply
+export async function applyInit(target,mode,templateRoot=upstream,profiles=recognitionProfiles) {
+  const plan=await planInit(target,mode,templateRoot,profiles); // fresh preflight on every apply
   if(plan.presence==='GOVERNANCE_INSTALLED')return {...plan,result:'ALREADY_INSTALLED',created:[]};
   if(['PARTIAL_GOVERNANCE','GOVERNANCE_UNKNOWN'].includes(plan.presence))return {...plan,result:'RECOVERY_REQUIRED'};
   if(plan.blocked) return { ...plan,result:'CONFLICTED' };
