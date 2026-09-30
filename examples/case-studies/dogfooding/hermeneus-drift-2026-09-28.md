@@ -32,6 +32,16 @@ The strongest observed failures were:
 
 The structural checker could pass these records because the files remained syntactically valid. That behavior is consistent with v1's structural-only checker design.
 
+## Evidence map
+
+| Claim | Recoverable support |
+| --- | --- |
+| Installed Governance Core was not stale or locally modified | Hermeneus `ee0b366218051eb938acbd4d280713fc3a04cbdb` matches upstream `fdcdea87ce7fb8ff60821356706b1148ea00d056` by blob SHA for AGENTS, SPEC, README, all five schemas, checker, and tooling version |
+| T-007–T-010 Authority had been repurposed as integration outcome | Incident baseline `ee0b366...`; post-merge reconciliation history includes PR/commit changes such as T-008 reconciliation `2416feb...` and M10 reconciliation merge `53c9212...` |
+| T-011 preserved historical execution authority after merge | T-011 at incident baseline still states its feature-branch authorization and `Not authorized to merge` |
+| Current State was stale after M11 integration | M11 was already on `main @ ee0b366...` while Current State still said the M11 branch was pending human merge |
+| Mechanical normalization was completed without Core/runtime mutation | Hermeneus PR #13 merged at `e41b3da09f1ae47d697ee35a398d95f01759352d` |
+
 ## Confirmed finding: Task Authority was repurposed as outcome
 
 Before integration, Tasks recorded the execution authority actually held by the agent. Examples included:
