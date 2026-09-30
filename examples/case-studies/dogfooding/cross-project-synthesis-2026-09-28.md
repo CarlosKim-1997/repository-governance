@@ -48,7 +48,7 @@ The incidents support separating at least these concepts:
 
 Durable statements of what is binding, permitted, required, prohibited, or deliberately left open.
 
-Typical homes: Governance, active Project Decisions, Constraints, Principles, and resolved/unresolved normative Canon.
+Typical sources are Governance, human-ratified active Decisions, applicable Constraints, and normative Principles. Current State and Open Questions are Canon, but they are not equivalent to normative authority: they preserve current position and unresolved uncertainty.
 
 ### 2. Execution-episode authority
 
@@ -100,11 +100,13 @@ Workspace Identity
 
 The v1 model already distinguishes several of these in prose. The dogfooding gap is that record ergonomics and operating guardrails did not keep them separated over many episodes.
 
-## Confirmed cross-project failure modes
+## Cross-project observed patterns and analyses
 
-### A. Current State information gravity
+### A. Current State overload is observed; information gravity is analysis
 
-Because State is on the bootstrap hot path, important information tends to accumulate there.
+Observed in both projects: Current State accumulated transient or historical detail beyond a compact current position.
+
+A plausible cross-project explanation is **information gravity**: because State is on the bootstrap hot path, operators have an incentive to place important information there so the next worker will see it. That causal explanation is analysis; the overload itself is directly observed.
 
 Observed consequences:
 
@@ -141,15 +143,15 @@ This confirms the v1 decision not to equate checker PASS with Governance health.
 
 It also creates stronger evidence for a separate semantic health-audit procedure rather than expanding the checker into an authority-bearing semantic agent.
 
-### E. Minimality needs operational force
+### E. Governance inflation is observed; the safety-pressure explanation is analysis
 
-"Keep records minimal" is weaker in practice than specific safety rules that require recording and verification.
+Both projects show durable-record growth beyond the intended minimal shape. One plausible explanation is that "keep records minimal" is less operationally specific than safety rules that require authority and verification, so a cautious worker may prefer recording more when uncertain.
 
-The protocol therefore needs clearer negative guidance about what **not** to persist.
+The observed inflation supports testing clearer negative guidance about what **not** to persist; the precise causal mechanism still needs replay or broader dogfooding.
 
-## Immediate v1-compatible clarifications with strong evidence
+## Strongly supported problems and candidate v1-compatible responses
 
-These are the strongest candidates for a compatible clarification/guidance pass. They still require human ratification before implementation.
+The incidents strongly support the underlying problems below. The listed responses are candidate compatible clarifications or guidance, not demonstrated remedies. They still require human ratification and, where practical, replay before implementation.
 
 ### Candidate 1 — Terminal Task Authority preservation
 
@@ -240,7 +242,7 @@ This may remain guidance/tooling rather than Canon semantics.
 
 Do not require the repository to contain a self-updating mirror of external CI or operational health.
 
-Record the verified artifact and evidence class where useful. Let the external system remain authoritative for its live state.
+Record the verified artifact and evidence class where useful. Treat the external system as the primary observation source for its live operational state rather than trying to mirror that state continuously into the repository.
 
 This avoids the evidence-after-commit bookkeeping recursion.
 
