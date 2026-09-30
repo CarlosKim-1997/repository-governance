@@ -16,6 +16,7 @@ A later protocol change must not cite a design hypothesis as though it were alre
 - [ReDiscovery consistency incident — 2026-09-28](rediscovery-consistency-incident-2026-09-28.md)
 - [Cross-project synthesis — 2026-09-28](cross-project-synthesis-2026-09-28.md)
 - [vNext candidate classification — 2026-09-30](vnext-candidate-classification-2026-09-30.md)
+- [vNext replay results R1–R6 — 2026-09-30](replay-results-r1-r6-2026-09-30.md)
 
 ## Evidence policy
 
