@@ -6,8 +6,8 @@
   "engines": { "node": ">=20" },
   "scripts": {
     "build": "node tooling/build.mjs",
-    "test": "node --test --test-reporter=tap tests/checker/check.test.mjs tests/installer/init.test.mjs tests/release/release.test.mjs tests/replay/vnext-r1-r6.test.mjs",
-    "test:replay": "node --test --test-reporter=tap tests/replay/vnext-r1-r6.test.mjs",
+    "test": "node --test --test-reporter=tap tests/checker/check.test.mjs tests/installer/init.test.mjs tests/release/release.test.mjs tests/replay/vnext-r1-r6.test.mjs tests/replay/vnext-r7-r10.test.mjs",
+    "test:replay": "node --test --test-reporter=tap tests/replay/vnext-r1-r6.test.mjs tests/replay/vnext-r7-r10.test.mjs",
     "check:template": "node template/tooling/governance/check.mjs template",
     "release:manifest": "node tooling/release-manifest.mjs"
   },
