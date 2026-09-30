@@ -87,7 +87,7 @@ feature complete
 → reconciliation work
 ```
 
-The important design observation is not simply that State became long. The bootstrap hot path created **information gravity**: because every new worker reads Current State, operators had an incentive to place every important fact there.
+The directly observed fact is that State accumulated transient history. One plausible explanation is **information gravity**: because every new worker reads Current State on the bootstrap hot path, operators have an incentive to place important facts there. That causal explanation is incident analysis rather than directly observed repository fact.
 
 Normalization compressed State back to current position, active work, blockers, material risks, and a representative verification basis.
 
