@@ -33,12 +33,12 @@ const records=[
   ...['decision','constraint','open-question','task','state'].map(x=>[`core/schemas/${x}-v1.md`,'NORMATIVE','UPSTREAM_OWNED']),
   ...templateRecords,
   ['tooling/init/init.mjs','TOOLING','UPSTREAM_OWNED'],
-  ...['GREENFIELD','BROWNFIELD','FINAL-AUDIT','UPGRADE'].map(x=>[`adoption/${x}.md`,'GUIDANCE','UPSTREAM_OWNED'])
+  ...['GREENFIELD','BROWNFIELD','FINAL-AUDIT','UPGRADE','OPERATIONS'].map(x=>[`adoption/${x}.md`,'GUIDANCE','UPSTREAM_OWNED'])
 ];
 const artifacts=[];
 for(const [path,klass,ownership] of records)artifacts.push({path,class:klass,ownership,sha256:createHash('sha256').update(await readFile(join(root,path))).digest('hex')});
 if(release && sourceCommit!==await cleanHead())throw new Error('source commit changed during release metadata generation');
-const manifest={schema:'governance-distribution-manifest/v1',distribution_version:'0.1.0',governance_version:'1.0.0',checker_version:'0.1.0',source_commit:sourceCommit,artifacts};
+const manifest={schema:'governance-distribution-manifest/v1',distribution_version:'0.2.0',governance_version:'1.0.0',checker_version:'0.1.0',source_commit:sourceCommit,artifacts};
 const output=join(root,'dist',release?'release':'development');
 await mkdir(output,{recursive:true});
 await writeFile(join(output,'distribution-manifest.json'),JSON.stringify(manifest,null,2)+'\n');
