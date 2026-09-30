@@ -25,7 +25,7 @@ async function cleanHead() {
 const sourceCommit=release?await cleanHead():'DEVELOPMENT_WORKTREE';
 const templateRecords=(await templateFiles(join(root,'template'))).map(path=>{
   const ownership=['template/AGENTS.md','template/governance/manifest.yaml'].includes(path)?'MIXED':path.startsWith('template/canon/')||path.startsWith('template/work/')?'PROJECT_OWNED':'UPSTREAM_OWNED';
-  const klass=path.startsWith('template/tooling/')?'TOOLING':'TEMPLATE';
+  const klass=path.startsWith('template/tooling/')?'TOOLING':path==='template/governance/OPERATIONS.md'?'GUIDANCE':'TEMPLATE';
   return [path,klass,ownership];
 });
 const records=[
@@ -33,12 +33,12 @@ const records=[
   ...['decision','constraint','open-question','task','state'].map(x=>[`core/schemas/${x}-v1.md`,'NORMATIVE','UPSTREAM_OWNED']),
   ...templateRecords,
   ['tooling/init/init.mjs','TOOLING','UPSTREAM_OWNED'],
-  ...['GREENFIELD','BROWNFIELD','FINAL-AUDIT','UPGRADE'].map(x=>[`adoption/${x}.md`,'GUIDANCE','UPSTREAM_OWNED'])
+  ...['GREENFIELD','BROWNFIELD','FINAL-AUDIT','UPGRADE','OPERATIONS'].map(x=>[`adoption/${x}.md`,'GUIDANCE','UPSTREAM_OWNED'])
 ];
 const artifacts=[];
 for(const [path,klass,ownership] of records)artifacts.push({path,class:klass,ownership,sha256:createHash('sha256').update(await readFile(join(root,path))).digest('hex')});
 if(release && sourceCommit!==await cleanHead())throw new Error('source commit changed during release metadata generation');
-const manifest={schema:'governance-distribution-manifest/v1',distribution_version:'0.1.0',governance_version:'1.0.0',checker_version:'0.1.0',source_commit:sourceCommit,artifacts};
+const manifest={schema:'governance-distribution-manifest/v1',distribution_version:'0.2.0',governance_version:'1.0.0',checker_version:'0.1.0',source_commit:sourceCommit,artifacts};
 const output=join(root,'dist',release?'release':'development');
 await mkdir(output,{recursive:true});
 await writeFile(join(output,'distribution-manifest.json'),JSON.stringify(manifest,null,2)+'\n');
