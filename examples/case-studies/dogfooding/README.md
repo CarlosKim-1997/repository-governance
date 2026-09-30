@@ -2,7 +2,7 @@
 
 This directory preserves empirical Repository Governance observations from long-running adopter repositories.
 
-These files are **not Repository Authority** and do not change Governance semantics. They are historical evidence and analysis inputs for future protocol review. A case study may contain three different kinds of statement and must keep them distinct:
+These files are **not Repository Authority** and do not change Governance semantics. They are curated historical case studies rather than raw primary-source dumps; primary support remains the referenced adopter repository artifacts, commit history, CI results, and incident-time observations. They are evidence and analysis inputs for future protocol review. Each case study should include a compact evidence map and keep three different kinds of statement distinct:
 
 1. **Observed evidence** — repository artifacts, commit history, CI results, or other directly recoverable facts.
 2. **Incident analysis** — a causal or structural interpretation of those facts.
