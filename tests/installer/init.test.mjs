@@ -209,3 +209,33 @@ test('dirty conflicting Git tree remains visible',async()=>fixture(async root=>{
   assert.equal(plan.git.dirty,'DIRTY_CONFLICTING');
   assert.equal(plan.blocked,true);
 }));
+
+
+test('Governance 1.0 snapshot without 0.2 optional operating files remains installed',async()=>fixture(async root=>{
+  assert.equal((await applyInit(root,'greenfield')).result,'INSTALLED_VERIFIED');
+  const optional=[
+    'governance/OPERATIONS.md',
+    'tooling/governance/preflight.mjs',
+    'tooling/governance/context.mjs'
+  ];
+  for(const path of optional)await rm(join(root,path));
+
+  const versionPath=join(root,'tooling/governance/version.json');
+  const historical=(await readFile(versionPath,'utf8')).replace(
+    '"distribution_version": "0.2.0"',
+    '"distribution_version": "0.1.0"'
+  );
+  await writeFile(versionPath,historical);
+
+  const plan=await planInit(root,'greenfield');
+  assert.equal(plan.presence,'GOVERNANCE_INSTALLED');
+  assert.equal(plan.blocked,false);
+  assert.equal(plan.upgrade_review_required,true);
+  for(const path of optional)
+    assert.equal(plan.entries.find(x=>x.path===path).action,'UPSTREAM_MISSING_LOCALLY');
+
+  const applied=await applyInit(root,'greenfield');
+  assert.equal(applied.result,'ALREADY_INSTALLED');
+  for(const path of optional)await assert.rejects(readFile(join(root,path)));
+  assert.equal(await readFile(versionPath,'utf8'),historical);
+}));
