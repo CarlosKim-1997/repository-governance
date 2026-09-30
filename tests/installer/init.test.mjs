@@ -239,3 +239,18 @@ test('Governance 1.0 snapshot without 0.2 optional operating files remains insta
   for(const path of optional)await assert.rejects(readFile(join(root,path)));
   assert.equal(await readFile(versionPath,'utf8'),historical);
 }));
+
+
+test('distribution 0.2 installs optional operating guidance and helpers without changing Governance version',async()=>fixture(async root=>{
+  const result=await applyInit(root,'greenfield');
+  assert.equal(result.result,'INSTALLED_VERIFIED');
+  for(const path of [
+    'governance/OPERATIONS.md',
+    'tooling/governance/preflight.mjs',
+    'tooling/governance/context.mjs'
+  ])assert.ok((await readFile(join(root,path),'utf8')).length>0,path);
+  const version=JSON.parse(await readFile(join(root,'tooling/governance/version.json'),'utf8'));
+  assert.equal(version.distribution_version,'0.2.0');
+  assert.equal(version.governance_version,'1.0.0');
+  assert.equal(version.checker_version,'0.1.0');
+}));
