@@ -41,6 +41,16 @@ The incident exposed several interacting problems:
 - later Decisions changed only parts of an earlier operational package, but v1 whole-object supersession made current precedence harder to resolve mechanically.
 - safety-oriented recording pressure caused documentation growth.
 
+## Evidence map
+
+| Claim | Recoverable support |
+| --- | --- |
+| Final reconciliation is on repository history | `main @ 74128282f1e36299181f1b310df97675f747d5ab` |
+| Hosted verification succeeded after reconciliation | Workflow `M3 deterministic checks`, Run #108, ID `36403807695`, exact head `74128282...`, SUCCESS |
+| Current status was duplicated across multiple writable surfaces | `canon/state/current.md`, `work/tasks/T-020.md`, and legacy `docs/milestones/M9.md` at the reconciliation baseline |
+| Partial-precedence friction existed in active Decisions | D-026, D-032, and D-033 remained ACTIVE while later Decisions replaced only date/`release_at` portions of the earlier package |
+| Desktop/local-main sibling divergence occurred | Preserved from the incident-time local checkout report; the local-only `a3c8600...` commit and forensic branch are not currently addressable from remote GitHub, so this item is incident-reported/local evidence rather than independently remote-verifiable evidence |
+
 ## Confirmed finding: too many truth surfaces
 
 At the incident point, one operational fact could be represented in at least:
@@ -85,15 +95,17 @@ This supports an important boundary:
 
 Repository intent, external operational reality, and repository-recorded knowledge are not the same thing.
 
-## Confirmed finding: workspace isolation needs lifecycle discipline
+## Incident-reported finding: workspace isolation needs lifecycle discipline
 
 The incident report recovered a desktop checkout whose local `main` pointed to local-only commit `a3c8600...` while `origin/main` had advanced on a sibling history.
 
-The local commit and a remote reconciliation commit had similar purpose but different trees. The local-only history was preserved on forensic branch:
+The local commit and a remote reconciliation commit had similar purpose but different trees. The local-only history was reported as preserved on forensic branch:
 
 `forensics/vercel-bootstrap-divergence-a3c8600`
 
-The information was already materially preserved elsewhere, so the local commit did not need to be merged or cherry-picked into current `main`.
+That local-only commit and forensic branch were observed during the incident-time local investigation but are not currently addressable from remote GitHub. This part of the case study is therefore preserved as incident-reported/local evidence, not as independently remote-verifiable repository evidence.
+
+The incident analysis concluded that the information was already materially preserved elsewhere, so the local commit did not need to be merged or cherry-picked into current `main`.
 
 The significant Governance lesson is not that branch/worktree isolation failed. Isolation worked. The missing discipline was the lifecycle after isolation:
 
@@ -125,17 +137,17 @@ The incident supports stronger guidance that:
 - Task is a bounded execution contract plus the verification needed to close that episode;
 - Report is the preferred sink for detailed historical execution and verification provenance that must remain recoverable.
 
-## Confirmed finding: safety pressure can defeat minimality
+## Incident analysis: safety pressure can defeat minimality
 
 v1 strongly enforces negative safety constraints: do not mutate without authority, do not claim verification without evidence, do not widen scope, and separate production authority.
 
-When minimality is expressed only as general advice, a cautious worker's local optimum can become:
+The observed fact is documentation growth under a safety-heavy workflow. The causal interpretation is that, when minimality is expressed mainly as general advice, a cautious worker may optimize toward:
 
 `when uncertain, record more`.
 
-Over many episodes this produces Governance inflation even while every individual action appears conservative.
+Over many episodes that behavior can produce Governance inflation even while each local action appears conservative.
 
-This incident therefore supplies evidence for making **non-recording rules** and **information lifetime** more operationally explicit.
+This interpretation supports testing stronger **non-recording rules** and **information-lifetime** guidance, but the causal mechanism itself is analysis rather than directly observed repository fact.
 
 ## Review hypothesis: partial amendment
 
