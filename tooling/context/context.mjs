@@ -2,7 +2,6 @@ import { lstat, readFile, readdir } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import process from 'node:process';
-import YAML from 'yaml';
 
 async function exists(path){
   try{return await lstat(path);}catch(error){if(error.code==='ENOENT')return null;throw error;}
@@ -19,13 +18,49 @@ async function findRoot(start){
   }
 }
 
+function scalar(value){
+  const text=value.trim();
+  if((text.startsWith('"') && text.endsWith('"')) || (text.startsWith("'") && text.endsWith("'")))
+    return text.slice(1,-1);
+  return text;
+}
+
+function parseSimpleYaml(text,path){
+  const result={};
+  const lines=text.split(/\r?\n/);
+  for(let i=0;i<lines.length;i++){
+    const raw=lines[i];
+    if(!raw.trim() || raw.trimStart().startsWith('#'))continue;
+    if(/^\s/.test(raw))throw new Error(`unsupported nested YAML in ${path}: ${raw}`);
+    const match=raw.match(/^([A-Za-z0-9_-]+):(?:\s*(.*))?$/);
+    if(!match)throw new Error(`unsupported YAML line in ${path}: ${raw}`);
+    const key=match[1],tail=(match[2]??'').trim();
+    if(Object.hasOwn(result,key))throw new Error(`duplicate YAML key in ${path}: ${key}`);
+    if(tail===''){
+      const values=[];
+      while(i+1<lines.length){
+        const next=lines[i+1];
+        const item=next.match(/^\s+-\s+(.+)$/);
+        if(!item)break;
+        values.push(scalar(item[1]));
+        i++;
+      }
+      result[key]=values;
+    }else if(tail.startsWith('[') && tail.endsWith(']')){
+      const inner=tail.slice(1,-1).trim();
+      result[key]=inner?inner.split(',').map(scalar):[];
+    }else{
+      result[key]=scalar(tail);
+    }
+  }
+  return result;
+}
+
 function parseFrontmatter(content,path){
   if(!content.startsWith('---\n') && !content.startsWith('---\r\n'))return null;
   const match=content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
   if(!match)return null;
-  const doc=YAML.parseDocument(match[1],{uniqueKeys:true,strict:true});
-  if(doc.errors.length)throw new Error(`invalid YAML frontmatter in ${path}: ${doc.errors[0].message}`);
-  return doc.toJS();
+  return parseSimpleYaml(match[1],path);
 }
 
 async function walkMarkdown(root,relDir){
@@ -84,7 +119,7 @@ function overlaps(recordAreas,targetAreas){
 export async function discoverContext(start,target){
   const root=await findRoot(start);
   const manifestText=await readFile(join(root,'governance/manifest.yaml'),'utf8');
-  const manifest=YAML.parse(manifestText);
+  const manifest=parseSimpleYaml(manifestText,'governance/manifest.yaml');
   const currentState=manifest.current_state;
 
   const paths=[];
