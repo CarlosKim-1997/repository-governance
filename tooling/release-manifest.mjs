@@ -25,7 +25,7 @@ async function cleanHead() {
 const sourceCommit=release?await cleanHead():'DEVELOPMENT_WORKTREE';
 const templateRecords=(await templateFiles(join(root,'template'))).map(path=>{
   const ownership=['template/AGENTS.md','template/governance/manifest.yaml'].includes(path)?'MIXED':path.startsWith('template/canon/')||path.startsWith('template/work/')?'PROJECT_OWNED':'UPSTREAM_OWNED';
-  const klass=path.startsWith('template/tooling/')?'TOOLING':'TEMPLATE';
+  const klass=path.startsWith('template/tooling/')?'TOOLING':path==='template/governance/OPERATIONS.md'?'GUIDANCE':'TEMPLATE';
   return [path,klass,ownership];
 });
 const records=[
