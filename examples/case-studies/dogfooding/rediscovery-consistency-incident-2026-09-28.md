@@ -36,10 +36,10 @@ The incident exposed several interacting problems:
 - Hosted CI advanced while repository bookkeeping still described older failed runs as current.
 - Task state lagged actual execution.
 - repository-local attempts to record the latest hosted CI evidence created a self-referential bookkeeping loop.
-- a desktop `main` and remote `origin/main` diverged into sibling histories after similar reconciliation work was performed in different execution contexts.
+- incident-time local observation reported a desktop `main` and remote `origin/main` diverging into sibling histories after similar reconciliation work in different execution contexts.
 - a local tool artifact created dirty-worktree noise.
-- later Decisions changed only parts of an earlier operational package, but v1 whole-object supersession made current precedence harder to resolve mechanically.
-- safety-oriented recording pressure caused documentation growth.
+- later Decisions changed only parts of an earlier operational package, while current precedence remained distributed across multiple ACTIVE Decisions and prose.
+- Governance documentation grew substantially under the safety-heavy workflow; the causal role of safety pressure is analyzed below.
 
 ## Evidence map
 
