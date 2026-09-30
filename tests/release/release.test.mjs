@@ -22,9 +22,16 @@ test('template normative copies exactly match Core',async()=>{
   for(const name of ['SPEC.md',...['decision','constraint','open-question','task','state'].map(x=>`schemas/${x}-v1.md`)])
     assert.deepEqual(await readFile(join(root,'core',name)),await readFile(join(root,'template/governance',name)),name);
 });
+test('installed operating guidance and helpers exactly match their sources',async()=>{
+  for(const [source,target] of [
+    ['adoption/OPERATIONS.md','template/governance/OPERATIONS.md'],
+    ['tooling/preflight/preflight.mjs','template/tooling/governance/preflight.mjs'],
+    ['tooling/context/context.mjs','template/tooling/governance/context.mjs']
+  ])assert.deepEqual(await readFile(join(root,source)),await readFile(join(root,target)),target);
+});
 test('reusable files have no reference-project leakage',async()=>{
   const needles=['ReDiscovery','Judge','Reveal','Conway','Supabase','Next.js','pnpm','CarlosKim-1997'];
-  const paths=['core/SPEC.md','template/AGENTS.md','template/governance/README.md','tooling/check/check.mjs','tooling/init/init.mjs'];
+  const paths=['core/SPEC.md','template/AGENTS.md','template/governance/README.md','adoption/OPERATIONS.md','tooling/check/check.mjs','tooling/init/init.mjs','tooling/preflight/preflight.mjs','tooling/context/context.mjs'];
   for(const path of paths){const content=await readFile(join(root,path),'utf8');for(const needle of needles)assert.ok(!content.includes(needle),`${path}: ${needle}`)}
 });
 test('distribution manifest hashes match bytes',async()=>{
@@ -32,9 +39,12 @@ test('distribution manifest hashes match bytes',async()=>{
   const manifest=JSON.parse(await readFile(join(root,'dist/development/distribution-manifest.json'),'utf8'));
   assert.equal(manifest.schema,'governance-distribution-manifest/v1');
   assert.equal(manifest.source_commit,'DEVELOPMENT_WORKTREE');
+  assert.equal(manifest.distribution_version,'0.2.0');
+  assert.equal(manifest.governance_version,'1.0.0');
+  assert.equal(manifest.checker_version,'0.1.0');
   const paths=new Set(manifest.artifacts.map(x=>x.path));
   for(const path of await allFiles(join(root,'template'),'template'))assert.ok(paths.has(path),`missing installed file: ${path}`);
-  assert.equal(manifest.artifacts.length,24);
+  assert.equal(manifest.artifacts.length,28);
   for(const artifact of manifest.artifacts){
     const actual=createHash('sha256').update(await readFile(join(root,artifact.path))).digest('hex');
     assert.equal(artifact.sha256,actual,artifact.path);
