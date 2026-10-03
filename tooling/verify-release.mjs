@@ -4,9 +4,11 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { resolve, join } from 'node:path';
 import process from 'node:process';
+import { createReleaseStaging } from './release-package.mjs';
 
 const root=resolve(import.meta.dirname,'..');
 const out=join(root,'dist','release');
+const verifyStaging=join(root,'dist','verify-package');
 const exec=promisify(execFile);
 
 async function sha256(path){
@@ -43,6 +45,12 @@ if(metadata.distribution_version!==installed.distribution_version)throw new Erro
 if(metadata.governance_version!==installed.governance_version || manifest.governance_version!==installed.governance_version)throw new Error('Governance version mismatch');
 if(metadata.checker_version!==installed.checker_version || manifest.checker_version!==installed.checker_version)throw new Error('checker version mismatch');
 
+const stagedPkg=await createReleaseStaging(root,verifyStaging);
+const stagedPkgPath=join(verifyStaging,'package.json');
+if(await sha256(stagedPkgPath)!==metadata.package_manifest_sha256)throw new Error('staged package manifest mismatch');
+if(Object.keys(stagedPkg.scripts).some(name=>name.startsWith('test')||name.startsWith('release:')))
+  throw new Error('development-only script present in public package manifest');
+
 const archivePath=join(out,metadata.archive);
 if(await sha256(archivePath)!==metadata.archive_sha256)throw new Error('release archive SHA-256 mismatch');
 if(await sha256(join(out,'distribution-manifest.json'))!==metadata.distribution_manifest_sha256)throw new Error('distribution manifest SHA-256 mismatch');
@@ -61,7 +69,7 @@ for(const artifact of manifest.artifacts){
 }
 
 const {stdout}=await exec('npm',['pack','--ignore-scripts','--dry-run','--json'],{
-  cwd:root,
+  cwd:verifyStaging,
   maxBuffer:8*1024*1024
 });
 const dry=JSON.parse(stdout.trim());
@@ -70,6 +78,11 @@ const expected=[...(dry[0].files||[]).map(x=>x.path)].sort((a,b)=>a.localeCompar
 const recorded=[...metadata.packed_files].sort((a,b)=>a.localeCompare(b,'en'));
 if(JSON.stringify(expected)!==JSON.stringify(recorded))throw new Error('packed file set no longer matches release metadata');
 if(recorded.length!==metadata.packed_file_count)throw new Error('packed file count mismatch');
+
+for(const path of recorded){
+  if(path.startsWith('tests/') || path.startsWith('examples/') || path.startsWith('.github/'))
+    throw new Error(`development-only path present in public archive: ${path}`);
+}
 
 process.stdout.write(
   `Verified Distribution ${metadata.distribution_version} release bundle at ${head}: ${metadata.archive}.\n`
