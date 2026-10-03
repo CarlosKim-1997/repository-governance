@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { createReleaseStaging } from '../../tooling/release-package.mjs';
 
 const root=resolve(import.meta.dirname,'../..');
 const exec=promisify(execFile);
@@ -35,7 +36,11 @@ test('release package surface and version metadata are coherent',async()=>{
     'release/RELEASE.md',
     'release/RELEASE-NOTES-0.2.0.md',
     'template/',
-    'tooling/'
+    'tooling/build.mjs',
+    'tooling/check/',
+    'tooling/context/',
+    'tooling/init/',
+    'tooling/preflight/'
   ]);
   const changelog=await readFile(join(root,'CHANGELOG.md'),'utf8');
   const notes=await readFile(join(root,'release/RELEASE-NOTES-0.2.0.md'),'utf8');
@@ -43,6 +48,20 @@ test('release package surface and version metadata are coherent',async()=>{
   assert.match(notes,/Governance semantics: \*\*1\.0\.0\*\*/);
   assert.match(notes,/Distribution: \*\*0\.2\.0\*\*/);
   assert.match(notes,/npm registry publication: \*\*out of scope\*\*/);
+});
+test('public staged package omits development-only scripts and evidence',async()=>{
+  const staging=await mkdtemp(join(tmpdir(),'governance-public-package-'));
+  try {
+    const staged=await createReleaseStaging(root,staging);
+    assert.deepEqual(Object.keys(staged.scripts),['build','check:template','preflight','context']);
+    assert.equal(staged.private,true);
+    await assert.rejects(readFile(join(staging,'tests/release/release.test.mjs')));
+    await assert.rejects(readFile(join(staging,'examples/case-studies/dogfooding/README.md')));
+    await assert.rejects(readFile(join(staging,'tooling/release-bundle.mjs')));
+    assert.match(await readFile(join(staging,'release/RELEASE-NOTES-0.2.0.md'),'utf8'),/Distribution 0\.2\.0/);
+  } finally {
+    await rm(staging,{recursive:true,force:true});
+  }
 });
 test('template normative copies exactly match Core',async()=>{
   for(const name of ['SPEC.md',...['decision','constraint','open-question','task','state'].map(x=>`schemas/${x}-v1.md`)])
