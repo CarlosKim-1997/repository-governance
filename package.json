@@ -32,6 +32,10 @@
     "release/RELEASE.md",
     "release/RELEASE-NOTES-0.2.0.md",
     "template/",
-    "tooling/"
+    "tooling/build.mjs",
+    "tooling/check/",
+    "tooling/context/",
+    "tooling/init/",
+    "tooling/preflight/"
   ]
 }
