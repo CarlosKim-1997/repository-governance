@@ -24,6 +24,7 @@ jobs:
       - name: Show runtimes
         run: |
           node --version
+          npm --version
           python --version
       - run: npm ci
       - run: npm run build
@@ -34,15 +35,30 @@ jobs:
           grep -E '^ok [0-9]+ - authoritative bootstrap symlinks cannot escape the repository$' "$RUNNER_TEMP/node-test.log"
           grep -E '^ok [0-9]+ - structured record file symlink outside root is rejected$' "$RUNNER_TEMP/node-test.log"
       - run: node template/tooling/governance/check.mjs template
-      - run: npm run release:manifest
-      - name: Verify unrelated Python consumer after installation
+      - name: Build source-bound release candidate
+        run: npm run release:bundle
+      - name: Verify release candidate integrity
+        run: npm run release:verify
+      - name: Verify unrelated Python consumer from packed release archive
         run: |
+          archive="$(realpath "$(find dist/release -maxdepth 1 -name 'repository-governance-*.tgz' -print -quit)")"
+          test -n "$archive"
+          harness="$(mktemp -d)"
           consumer="$(mktemp -d)"
-          trap 'rm -rf "$consumer"' EXIT
+          trap 'rm -rf "$harness" "$consumer"' EXIT
+          printf '{"private":true}\n' > "$harness/package.json"
+          npm install --ignore-scripts --no-audit --no-fund --no-package-lock --prefix "$harness" "$archive"
           cp -a tests/fixtures/python-utility/. "$consumer/"
-          node tooling/init/init.mjs init --greenfield --target "$consumer" --apply
+          node "$harness/node_modules/repository-governance/tooling/init/init.mjs" init --greenfield --target "$consumer" --apply
           node "$consumer/tooling/governance/check.mjs" "$consumer"
           (cd "$consumer" && python -m unittest discover -s tests -v)
+      - name: Upload release candidate artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: repository-governance-release-${{ github.sha }}
+          path: dist/release/*
+          if-no-files-found: error
+          retention-days: 14
       - name: Check tracked source remains clean
         run: |
           git diff --check

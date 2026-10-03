@@ -3,7 +3,9 @@
   "private": true,
   "version": "0.2.0",
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "node tooling/build.mjs",
     "test": "node --test --test-reporter=tap tests/checker/check.test.mjs tests/installer/init.test.mjs tests/release/release.test.mjs tests/replay/vnext-r1-r6.test.mjs tests/replay/vnext-r7-r10.test.mjs tests/tooling/preflight.test.mjs tests/tooling/context.test.mjs",
@@ -11,8 +13,29 @@
     "check:template": "node template/tooling/governance/check.mjs template",
     "preflight": "node tooling/preflight/preflight.mjs",
     "context": "node tooling/context/context.mjs",
-    "release:manifest": "node tooling/release-manifest.mjs"
+    "release:manifest": "node tooling/release-manifest.mjs",
+    "release:bundle": "node tooling/release-bundle.mjs",
+    "release:verify": "node tooling/verify-release.mjs"
   },
-  "dependencies": { "yaml": "^2.8.1" },
-  "devDependencies": { "esbuild": "^0.25.10" }
+  "dependencies": {
+    "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.10"
+  },
+  "files": [
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "adoption/",
+    "core/",
+    "release/RELEASE.md",
+    "release/RELEASE-NOTES-0.2.0.md",
+    "template/",
+    "tooling/build.mjs",
+    "tooling/check/",
+    "tooling/context/",
+    "tooling/init/",
+    "tooling/preflight/"
+  ]
 }

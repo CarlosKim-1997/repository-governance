@@ -1,99 +1,112 @@
-# Distribution 0.2.0 candidate review
+# Distribution 0.2.0 release candidate review
 
 ## Status
 
-Draft review packet. No publication or adopter migration is authorized by this file.
+Distribution 0.2.0 is a **prerelease candidate**.
 
-Target:
+This file records release-readiness intent. It does not authorize publication.
+
+Current version layers:
 
 - Governance Version: **1.0.0**
 - Distribution Version: **0.2.0**
 - Checker Version: **0.1.0**
 
-Baseline for this upgrade line:
+Session C baseline:
 
-`55cff02b8f2a5d17d10631beabf26dbcaecd9305`
+`662f1fe4cc17abdb5f679af271eedd7b39655476`
 
-## Why this is not Governance 2.0
+## Evidence already established
 
-Hermeneus and ReDiscovery dogfooding produced ten replay scenarios. R1–R10 all passed under the existing five-schema Governance 1.0.0 information model without a new first-class type, ID namespace, lifecycle, binding applicability selector, or authorization class.
+### Session A
 
-The upgrade therefore addresses observed failures through:
+- Hermeneus and ReDiscovery incidents were converted into curated evidence.
+- vNext candidates were classified before implementation.
+- R1–R10 replay scenarios all passed under Governance 1.0.0.
+- no tested scenario required a new first-class object, lifecycle, permission class, or applicability selector.
 
-1. compatible clarification of meanings already implied by v1;
-2. non-normative operating guidance;
-3. optional read-only helpers.
+### Session B
 
-If review finds that any proposed Core wording changes binding authority or invalidates a previously valid 1.0 repository, stop and reclassify the change as semantic instead of merging this candidate.
+Distribution 0.2.0 was applied and human-integrated into:
 
-## Core clarification delta
+- Hermeneus — coherent Distribution 0.1 control case;
+- ReDiscovery — local/precursor v1 convergence stress case.
 
-No required headings, fields, statuses, relations, IDs, or manifest fields change.
+Both ended at:
 
-Clarifications proposed:
+- Governance `1.0.0`
+- Distribution `0.2.0`
+- Checker `0.1.0`
 
-- terminal Task Authority remains the permission set of the closed execution episode;
-- later integration/release/deployment/verification outcome does not overwrite historical Task Authority;
-- integration/merge/release/verification events do not automatically require Canon mutation;
-- Current State excludes ordinary branch/PR/CI history unless it changes current actionable position;
-- State Verification Basis is representative rather than an exhaustive evidence ledger;
-- repository records need not continuously mirror live external-system health.
+ReDiscovery's migration also exposed unrelated calendar-dependent test rot. That repair was isolated, independently verified, integrated first, and excluded from the refreshed Governance migration diff.
 
-## New installed guidance
+The Session B synthesis is preserved under `examples/case-studies/dogfooding/`.
 
-`governance/OPERATIONS.md` provides non-normative procedures for:
+## Why this remains Governance 1.0.0
 
-- information lifetime and natural storage surfaces;
-- Task closure;
-- State compression;
-- integration without automatic reconciliation;
-- Decision timelessness;
-- external live-state boundaries;
-- workspace entry/retirement;
-- semantic health audits;
-- explicit minimality exclusions.
+No required heading, schema field, status, relation type, object type, ID namespace, manifest selector, or authorization class was added.
 
-## New optional installed helpers
+The 0.2 Core delta clarifies meanings already implied by v1:
 
-### Workspace preflight
+- terminal Task Authority preserves episode permissions;
+- later outcome does not overwrite Authority;
+- integration is not automatically a Canon event;
+- Current State is current-position compression rather than a history ledger;
+- Verification Basis is representative;
+- repository observations do not own later external live state.
 
-`tooling/governance/preflight.mjs`
+If release-readiness work discovers that these claims are not actually backward compatible, stop the release and return to semantic protocol work.
 
-Read-only local Git observation:
+## Distribution 0.2 additions
 
-- root;
-- branch/detached state;
-- HEAD;
-- cleanliness;
-- linked worktrees;
-- local upstream comparison;
-- optional comparison against a named local ref.
+Installed non-normative guidance:
 
-It never fetches and never mutates.
+- `governance/OPERATIONS.md`
 
-### Context discovery
+Installed optional read-only helpers:
 
-`tooling/governance/context.mjs`
+- `tooling/governance/preflight.mjs`
+- `tooling/governance/context.mjs`
 
-Read-only advisory preload suggestions based on:
+The published Governance 1.0.0 recognition profile remains unchanged.
 
-- target record;
-- formal direct relations;
-- global/overlapping area candidates;
-- active Governance Constraints.
+## Session C release engineering
 
-It explicitly does not prove complete applicability, ownership, or permission.
+The intended public artifact is a GitHub **prerelease**, not an npm publication.
 
-## Compatibility contract
+Expected tag:
 
-The immutable Governance 1.0.0 recognition profile is unchanged.
+`v0.2.0`
 
-A historical coherent 1.0 snapshot that lacks the new 0.2 optional files must remain:
+Expected assets:
 
-- `GOVERNANCE_INSTALLED`;
-- not blocked;
-- eligible for explicit upgrade review;
-- untouched by ordinary `init --apply`.
+- `repository-governance-0.2.0.tgz`
+- `distribution-manifest.json`
+- `SHA256SUMS`
+- `release-metadata.json`
+- `RELEASE-SHA256SUMS`
+
+The source package remains `private: true`.
+
+CI must build the archive from one clean committed source SHA, verify release integrity, install the packed archive into a clean harness, and then apply Governance from that packed artifact to an unrelated Python consumer.
+
+## Required final gates
+
+Before publication authorization:
+
+- all checker/installer/replay/helper/release tests PASS;
+- Linux symlink proofs execute with zero skipped tests;
+- template Core copies equal Core;
+- OPERATIONS/helper installed copies equal their sources;
+- historical Governance 1.0 snapshot recognition regression PASS;
+- source-bound release bundle builds from exact candidate SHA;
+- release checksum verification PASS;
+- packed file set is bounded and excludes tests, adopter evidence, GitHub workflow implementation, and Session C candidate material;
+- packed archive clean-room installation PASS;
+- unrelated Python consumer PASS after archive-based installation;
+- source remains clean after release generation;
+- hosted artifact is retained for final inspection;
+- exact candidate main SHA receives a final read-only audit.
 
 ## Intentionally not added
 
@@ -104,21 +117,14 @@ A historical coherent 1.0 snapshot that lacks the new 0.2 optional files must re
 - required ratification metadata;
 - Outcome schema;
 - semantic AI checker;
-- automatic State generation or repair;
-- central lock manager.
+- automatic State repair/generation;
+- central lock manager;
+- npm registry publication.
 
-## Verification gates before human approval
+## Publication boundary
 
-The candidate should not be approved until hosted CI establishes:
+Release-ready does not mean released.
 
-- all existing checker/installer/release tests pass;
-- R1–R10 replay tests pass;
-- helper tests pass;
-- template Core copies equal Core;
-- installed OPERATIONS/helper copies equal sources after build;
-- historical 1.0 snapshot recognition regression passes;
-- distribution manifest reports 0.2.0 / Governance 1.0.0 / checker 0.1.0;
-- clean-room non-JavaScript installation still passes;
-- build leaves tracked source clean.
+The final `v0.2.0` tag and GitHub prerelease require a separate explicit human publication instruction identifying the exact verified source SHA.
 
-Human review must separately decide whether the Core clarification is truly compatible and should be ratified.
+Any source change after final verification invalidates that publication basis and requires rerunning the release gate.
