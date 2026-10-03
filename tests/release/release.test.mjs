@@ -18,6 +18,32 @@ async function allFiles(dir,prefix=''){
   }
   return result.sort();
 }
+test('release package surface and version metadata are coherent',async()=>{
+  const pkg=JSON.parse(await readFile(join(root,'package.json'),'utf8'));
+  const installed=JSON.parse(await readFile(join(root,'template/tooling/governance/version.json'),'utf8'));
+  assert.equal(pkg.private,true);
+  assert.equal(pkg.version,'0.2.0');
+  assert.equal(installed.distribution_version,pkg.version);
+  assert.equal(installed.governance_version,'1.0.0');
+  assert.equal(installed.checker_version,'0.1.0');
+  assert.deepEqual(pkg.files,[
+    'README.md',
+    'CHANGELOG.md',
+    'LICENSE',
+    'adoption/',
+    'core/',
+    'release/RELEASE.md',
+    'release/RELEASE-NOTES-0.2.0.md',
+    'template/',
+    'tooling/'
+  ]);
+  const changelog=await readFile(join(root,'CHANGELOG.md'),'utf8');
+  const notes=await readFile(join(root,'release/RELEASE-NOTES-0.2.0.md'),'utf8');
+  assert.match(changelog,/^## 0\.2\.0$/m);
+  assert.match(notes,/Governance semantics: \*\*1\.0\.0\*\*/);
+  assert.match(notes,/Distribution: \*\*0\.2\.0\*\*/);
+  assert.match(notes,/npm registry publication: \*\*out of scope\*\*/);
+});
 test('template normative copies exactly match Core',async()=>{
   for(const name of ['SPEC.md',...['decision','constraint','open-question','task','state'].map(x=>`schemas/${x}-v1.md`)])
     assert.deepEqual(await readFile(join(root,'core',name)),await readFile(join(root,'template/governance',name)),name);
