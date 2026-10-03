@@ -18,6 +18,8 @@ A later protocol change must not cite a design hypothesis as though it were alre
 - [vNext candidate classification — 2026-09-30](vnext-candidate-classification-2026-09-30.md)
 - [vNext replay results R1–R6 — 2026-09-30](replay-results-r1-r6-2026-09-30.md)
 - [vNext replay results R7–R10 — 2026-09-30](replay-results-r7-r10-2026-09-30.md)
+- [Session B migration handoff — 2026-10-01](session-b-migration-handoff-2026-10-01.md)
+- [Session B migration synthesis — 2026-10-03](session-b-migration-synthesis-2026-10-03.md)
 
 ## Evidence policy
 
