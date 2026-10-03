@@ -4,10 +4,12 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { resolve, join, basename } from 'node:path';
 import process from 'node:process';
+import { createReleaseStaging } from './release-package.mjs';
 
 const root=resolve(import.meta.dirname,'..');
 const exec=promisify(execFile);
 const out=join(root,'dist','release');
+const staging=join(root,'dist','package');
 
 async function sha256(path){
   return createHash('sha256').update(await readFile(path)).digest('hex');
@@ -34,6 +36,11 @@ if(!changelog.includes(`## ${pkg.version}\n`))throw new Error(`CHANGELOG missing
 
 await rm(out,{recursive:true,force:true});
 await mkdir(out,{recursive:true});
+const stagedPkg=await createReleaseStaging(root,staging);
+
+if(stagedPkg.version!==pkg.version)throw new Error('staged package version mismatch');
+if(Object.keys(stagedPkg.scripts).some(name=>name.startsWith('test')||name.startsWith('release:')))
+  throw new Error('development-only scripts leaked into staged package');
 
 await exec(process.execPath,['tooling/release-manifest.mjs','--release'],{cwd:root});
 
@@ -43,7 +50,7 @@ const {stdout}=await exec('npm',[
   '--json',
   '--pack-destination',
   out
-],{cwd:root,maxBuffer:8*1024*1024});
+],{cwd:staging,maxBuffer:8*1024*1024});
 
 const packed=JSON.parse(stdout.trim());
 if(!Array.isArray(packed) || packed.length!==1)throw new Error('npm pack returned unexpected result');
@@ -73,6 +80,7 @@ for(const path of [
   'template/governance/manifest.yaml',
   'template/tooling/governance/check.mjs',
   'template/tooling/governance/version.json',
+  'tooling/build.mjs',
   'tooling/init/init.mjs'
 ])requirePacked(packedFiles,path);
 
@@ -82,12 +90,17 @@ for(const path of packedFiles){
     path.startsWith('examples/') ||
     path.startsWith('.github/') ||
     path.startsWith('release/CANDIDATE-') ||
-    path.startsWith('release/SESSION-')
+    path.startsWith('release/SESSION-') ||
+    path==='tooling/release-bundle.mjs' ||
+    path==='tooling/release-manifest.mjs' ||
+    path==='tooling/release-package.mjs' ||
+    path==='tooling/verify-release.mjs'
   )throw new Error(`development-only path leaked into release archive: ${path}`);
 }
 
 const manifestPath=join(out,'distribution-manifest.json');
 const internalSumsPath=join(out,'SHA256SUMS');
+const stagingPackagePath=join(staging,'package.json');
 const metadata={
   schema:'governance-release-bundle/v1',
   source_commit:sourceCommit,
@@ -100,6 +113,7 @@ const metadata={
   npm_integrity:info.integrity,
   packed_file_count:packedFiles.size,
   packed_files:[...packedFiles].sort((a,b)=>a.localeCompare(b,'en')),
+  package_manifest_sha256:await sha256(stagingPackagePath),
   distribution_manifest_sha256:await sha256(manifestPath),
   internal_sha256s_sha256:await sha256(internalSumsPath)
 };
