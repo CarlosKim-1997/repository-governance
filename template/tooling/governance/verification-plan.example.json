@@ -1,0 +1,24 @@
+{
+  "format": "verification-plan/local-v1",
+  "requirement": {
+    "source": "Replace with the actual Task Verification section or requirement file/heading",
+    "scope": "Demonstrate a local arithmetic observation: six times seven equals 42"
+  },
+  "targets": ["verification-plan.json"],
+  "artifactDir": ".verification-runs",
+  "checks": [
+    {
+      "label": "arithmetic",
+      "kind": "command",
+      "inputs": "6 and 7",
+      "expected": "stdout contains observed: 42",
+      "basis": "Direct calculation: 6 * 7 = 42",
+      "failure": "Nonzero exit, absent observation, incomplete run or changed declared scope",
+      "permissions": "Local Node calculation and local log files only",
+      "command": { "executable": "node", "args": ["-e", "console.log('observed: ' + (6 * 7))"], "cwd": "." },
+      "timeoutMs": 5000,
+      "maxOutputBytes": 8192,
+      "assertions": { "exitCode": 0, "stdoutIncludes": ["observed: 42"] }
+    }
+  ]
+}

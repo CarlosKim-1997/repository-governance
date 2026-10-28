@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0
+
+Optional local execution verification with unchanged Governance 1.0.0 and Checker 0.1.0.
+
+- added plan-only inspection, explicit hash-bound execution approval, and current-evidence rechecking;
+- bound observations to declared content, invocation metadata, bounded logs and helper bytes;
+- kept mechanical observations separate from human semantic acceptance;
+- corrected empty-file TAP wrapper and incomplete-record counterexamples, including escaped filenames;
+- added independent regression and installed Node/Python consumer coverage;
+- retained existing snapshot recognition and explicit upgrade boundaries;
+- expanded hosted verification across Linux Node 20/22/24, macOS and Windows.
+
 ## 0.2.0
 
 Governance 1.0-compatible distribution upgrade backed by Hermeneus and ReDiscovery dogfooding.

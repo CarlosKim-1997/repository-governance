@@ -8,13 +8,14 @@ export const releasePackagePaths=[
   'adoption',
   'core',
   'release/RELEASE.md',
-  'release/RELEASE-NOTES-0.2.0.md',
+  'release/RELEASE-NOTES-0.3.0.md',
   'template',
   'tooling/build.mjs',
   'tooling/check',
   'tooling/context',
   'tooling/init',
-  'tooling/preflight'
+  'tooling/preflight',
+  'tooling/verify'
 ];
 
 export async function createReleaseStaging(root,staging){
@@ -39,7 +40,8 @@ export async function createReleaseStaging(root,staging){
       build:sourcePkg.scripts.build,
       'check:template':sourcePkg.scripts['check:template'],
       preflight:sourcePkg.scripts.preflight,
-      context:sourcePkg.scripts.context
+      context:sourcePkg.scripts.context,
+      verify:sourcePkg.scripts.verify
     },
     dependencies:sourcePkg.dependencies,
     devDependencies:sourcePkg.devDependencies

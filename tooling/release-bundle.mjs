@@ -30,7 +30,7 @@ const pkg=JSON.parse(await readFile(join(root,'package.json'),'utf8'));
 const installed=JSON.parse(await readFile(join(root,'template/tooling/governance/version.json'),'utf8'));
 const changelog=await readFile(join(root,'CHANGELOG.md'),'utf8');
 
-if(pkg.private!==true)throw new Error('Distribution 0.2 must remain private from npm publication');
+if(pkg.private!==true)throw new Error('Distribution must remain private from npm publication');
 if(pkg.version!==installed.distribution_version)throw new Error('package version and installed distribution version differ');
 if(!changelog.includes(`## ${pkg.version}\n`))throw new Error(`CHANGELOG missing Distribution ${pkg.version}`);
 
@@ -81,7 +81,13 @@ for(const path of [
   'template/tooling/governance/check.mjs',
   'template/tooling/governance/version.json',
   'tooling/build.mjs',
-  'tooling/init/init.mjs'
+  'tooling/init/init.mjs',
+  'adoption/VERIFICATION.md',
+  'template/governance/VERIFICATION.md',
+  'template/tooling/governance/verify.mjs',
+  'template/tooling/governance/verification-plan.example.json',
+  'tooling/verify/verify.mjs',
+  'tooling/verify/verification-plan.example.json'
 ])requirePacked(packedFiles,path);
 
 for(const path of packedFiles){

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cp, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdtemp, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { execFile } from 'node:child_process';
@@ -235,8 +235,8 @@ test('R6 plain Git facts distinguish reference and mutation worktrees before wri
     const rootClean=(await exec('git',['status','--porcelain'],{cwd:repoDir})).stdout.trim();
     const list=(await exec('git',['worktree','list','--porcelain'],{cwd:repoDir})).stdout;
 
-    assert.equal(rootTop,repoDir);
-    assert.equal(wtTop,worktree);
+    assert.equal(await realpath(rootTop),await realpath(repoDir));
+    assert.equal(await realpath(wtTop),await realpath(worktree));
     assert.equal(rootBranch,'main');
     assert.equal(wtBranch,'replay-mutation');
     assert.equal(rootHead,baseline);

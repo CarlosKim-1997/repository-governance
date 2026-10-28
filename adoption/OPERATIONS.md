@@ -205,3 +205,7 @@ Normally avoid durable Canon for:
 - execution diaries.
 
 The goal is not fewer records at any cost. The goal is fewer durable truth surfaces while preserving what future workers genuinely need.
+
+## 11. Optional execution verification
+
+For preimplementation expectations, explicitly authorized local commands, artifact-bound observations and Work reporting, read [verification guidance](VERIFICATION.md). This optional helper does not change Task completion, authority, or the existing preflight/context guidance above.

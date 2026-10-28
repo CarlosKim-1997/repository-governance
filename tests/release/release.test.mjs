@@ -23,7 +23,7 @@ test('release package surface and version metadata are coherent',async()=>{
   const pkg=JSON.parse(await readFile(join(root,'package.json'),'utf8'));
   const installed=JSON.parse(await readFile(join(root,'template/tooling/governance/version.json'),'utf8'));
   assert.equal(pkg.private,true);
-  assert.equal(pkg.version,'0.2.0');
+  assert.equal(pkg.version,'0.3.0');
   assert.equal(installed.distribution_version,pkg.version);
   assert.equal(installed.governance_version,'1.0.0');
   assert.equal(installed.checker_version,'0.1.0');
@@ -34,31 +34,32 @@ test('release package surface and version metadata are coherent',async()=>{
     'adoption/',
     'core/',
     'release/RELEASE.md',
-    'release/RELEASE-NOTES-0.2.0.md',
+    'release/RELEASE-NOTES-0.3.0.md',
     'template/',
     'tooling/build.mjs',
     'tooling/check/',
     'tooling/context/',
     'tooling/init/',
-    'tooling/preflight/'
+    'tooling/preflight/',
+    'tooling/verify/'
   ]);
   const changelog=await readFile(join(root,'CHANGELOG.md'),'utf8');
-  const notes=await readFile(join(root,'release/RELEASE-NOTES-0.2.0.md'),'utf8');
-  assert.match(changelog,/^## 0\.2\.0$/m);
+  const notes=await readFile(join(root,'release/RELEASE-NOTES-0.3.0.md'),'utf8');
+  assert.match(changelog,/^## 0\.3\.0$/m);
   assert.match(notes,/Governance semantics: \*\*1\.0\.0\*\*/);
-  assert.match(notes,/Distribution: \*\*0\.2\.0\*\*/);
+  assert.match(notes,/Distribution: \*\*0\.3\.0\*\*/);
   assert.match(notes,/npm registry publication: \*\*out of scope\*\*/);
 });
 test('public staged package omits development-only scripts and evidence',async()=>{
   const staging=await mkdtemp(join(tmpdir(),'governance-public-package-'));
   try {
     const staged=await createReleaseStaging(root,staging);
-    assert.deepEqual(Object.keys(staged.scripts),['build','check:template','preflight','context']);
+    assert.deepEqual(Object.keys(staged.scripts),['build','check:template','preflight','context','verify']);
     assert.equal(staged.private,true);
     await assert.rejects(readFile(join(staging,'tests/release/release.test.mjs')));
     await assert.rejects(readFile(join(staging,'examples/case-studies/dogfooding/README.md')));
     await assert.rejects(readFile(join(staging,'tooling/release-bundle.mjs')));
-    assert.match(await readFile(join(staging,'release/RELEASE-NOTES-0.2.0.md'),'utf8'),/Distribution 0\.2\.0/);
+    assert.match(await readFile(join(staging,'release/RELEASE-NOTES-0.3.0.md'),'utf8'),/Distribution 0\.3\.0/);
   } finally {
     await rm(staging,{recursive:true,force:true});
   }
@@ -71,7 +72,10 @@ test('installed operating guidance and helpers exactly match their sources',asyn
   for(const [source,target] of [
     ['adoption/OPERATIONS.md','template/governance/OPERATIONS.md'],
     ['tooling/preflight/preflight.mjs','template/tooling/governance/preflight.mjs'],
-    ['tooling/context/context.mjs','template/tooling/governance/context.mjs']
+    ['tooling/context/context.mjs','template/tooling/governance/context.mjs'],
+    ['adoption/VERIFICATION.md','template/governance/VERIFICATION.md'],
+    ['tooling/verify/verify.mjs','template/tooling/governance/verify.mjs'],
+    ['tooling/verify/verification-plan.example.json','template/tooling/governance/verification-plan.example.json']
   ])assert.deepEqual(await readFile(join(root,source)),await readFile(join(root,target)),target);
 });
 test('reusable files have no reference-project leakage',async()=>{
@@ -84,12 +88,13 @@ test('distribution manifest hashes match bytes',async()=>{
   const manifest=JSON.parse(await readFile(join(root,'dist/development/distribution-manifest.json'),'utf8'));
   assert.equal(manifest.schema,'governance-distribution-manifest/v1');
   assert.equal(manifest.source_commit,'DEVELOPMENT_WORKTREE');
-  assert.equal(manifest.distribution_version,'0.2.0');
+  assert.equal(manifest.distribution_version,'0.3.0');
   assert.equal(manifest.governance_version,'1.0.0');
   assert.equal(manifest.checker_version,'0.1.0');
   const paths=new Set(manifest.artifacts.map(x=>x.path));
   for(const path of await allFiles(join(root,'template'),'template'))assert.ok(paths.has(path),`missing installed file: ${path}`);
-  assert.equal(manifest.artifacts.length,28);
+  // Three optional installed files and their three canonical sources extend 28.
+  assert.equal(manifest.artifacts.length,34);
   for(const artifact of manifest.artifacts){
     const actual=createHash('sha256').update(await readFile(join(root,artifact.path))).digest('hex');
     assert.equal(artifact.sha256,actual,artifact.path);
@@ -105,6 +110,7 @@ test('release metadata uses a clean committed source outside the source tree',as
     await cp(join(root,'tooling/release-manifest.mjs'),join(fixture,'tooling/release-manifest.mjs'));
     await mkdir(join(fixture,'tooling/init'),{recursive:true});
     await cp(join(root,'tooling/init/init.mjs'),join(fixture,'tooling/init/init.mjs'));
+    await cp(join(root,'tooling/verify'),join(fixture,'tooling/verify'),{recursive:true});
     await writeFile(join(fixture,'.gitignore'),'dist/\n');
     for(const args of [['init'],['add','-A'],['-c','user.name=Fixture','-c','user.email=fixture@example.invalid','commit','-m','fixture']])await exec('git',args,{cwd:fixture});
     const sha=(await exec('git',['rev-parse','HEAD'],{cwd:fixture})).stdout.trim();

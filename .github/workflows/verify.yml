@@ -12,12 +12,25 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    name: Verify ${{ matrix.os }} / Node ${{ matrix.node }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, node: '20' }
+          - { os: ubuntu-latest, node: '22' }
+          - { os: ubuntu-latest, node: '24' }
+          - { os: macos-latest, node: '24' }
+          - { os: windows-latest, node: '24' }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ matrix.node }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -28,17 +41,45 @@ jobs:
           python --version
       - run: npm ci
       - run: npm run build
-      - name: Run suite and prove Linux symlink cases executed
+      - name: Run full suite including packaged consumers
+        run: npm test | tee "$RUNNER_TEMP/node-test.log"
+      - name: Prove POSIX symlink cases executed
+        if: runner.os != 'Windows'
         run: |
-          npm test | tee "$RUNNER_TEMP/node-test.log"
           grep -Fx '# skipped 0' "$RUNNER_TEMP/node-test.log"
           grep -E '^ok [0-9]+ - authoritative bootstrap symlinks cannot escape the repository$' "$RUNNER_TEMP/node-test.log"
           grep -E '^ok [0-9]+ - structured record file symlink outside root is rejected$' "$RUNNER_TEMP/node-test.log"
-      - run: node template/tooling/governance/check.mjs template
-      - name: Build source-bound release candidate
-        run: npm run release:bundle
-      - name: Verify release candidate integrity
-        run: npm run release:verify
+      - run: npm run check:template
+      - name: Check tracked source remains clean
+        run: |
+          git diff --check
+          git status --short
+          test -z "$(git status --porcelain)"
+      - name: Upload verification log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-${{ matrix.os }}-node-${{ matrix.node }}-${{ github.sha }}
+          path: ${{ runner.temp }}/node-test.log
+          if-no-files-found: warn
+          retention-days: 14
+
+  release-candidate:
+    name: Verify source-bound release candidate
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: npm ci
+      - run: npm run build
+      - run: npm run release:bundle
+      - run: npm run release:verify
       - name: Verify unrelated Python consumer from packed release archive
         run: |
           archive="$(realpath "$(find dist/release -maxdepth 1 -name 'repository-governance-*.tgz' -print -quit)")"
@@ -62,5 +103,4 @@ jobs:
       - name: Check tracked source remains clean
         run: |
           git diff --check
-          git status --short
           test -z "$(git status --porcelain)"
