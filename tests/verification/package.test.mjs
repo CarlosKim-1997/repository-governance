@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cp, readFile, writeFile, mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { cp, readFile, writeFile, mkdir, mkdtemp, rm, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { execFile } from 'node:child_process';
@@ -9,7 +9,9 @@ import { createReleaseStaging, releasePackagePaths } from '../../tooling/release
 
 const root = resolve(import.meta.dirname, '../..'), exec = promisify(execFile);
 test('latest-main staged archive installs into fresh Git-free Node/Python consumers and runs/checks installed verification', async () => {
-  const fixture = await mkdtemp(join(tmpdir(), 'verification-packaged-'));
+  // macOS tmpdir may use /var, an alias for /private/var. Invoke installed
+  // native files through their actual paths, consistent with helper preflight.
+  const fixture = await realpath(await mkdtemp(join(tmpdir(), 'verification-packaged-')));
   try {
     const staging = join(fixture, 'staging'); await createReleaseStaging(root, staging);
     const metadata = JSON.parse(await readFile(join(staging, 'package.json'), 'utf8'));
