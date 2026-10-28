@@ -1,0 +1,2 @@
+# esbuild emits LF on every platform; preserve those bytes on checkout.
+/template/tooling/governance/check.mjs text eol=lf

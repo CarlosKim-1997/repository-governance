@@ -18,3 +18,5 @@ For that case:
 - add optional upstream files deliberately; ordinary installer `init --apply` does not auto-upgrade an installed snapshot.
 
 If the target changes what is binding, authorized, structurally required, or migration-sensitive, reclassify the upgrade as `SEMANTIC` and use a new explicit Governance version before adoption.
+
+The Distribution 0.3.0 optional verification addition is `TOOLING_ONLY`: review `governance/VERIFICATION.md`, `tooling/governance/verify.mjs`, its sample, and the mixed AGENTS/OPERATIONS entry links against A/B/C. Preserve the existing operating guidance and local instructions. These are not recognition landmarks and ordinary init does not add them to existing snapshots. Governance 1.0.0 and Checker 0.1.0 remain unchanged; the target Distribution is 0.3.0. Updated result completeness checks require fresh helper evidence; do not convert older incomplete records into accepted observations.

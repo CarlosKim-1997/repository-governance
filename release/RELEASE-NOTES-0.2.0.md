@@ -87,6 +87,8 @@ The release metadata binds the archive to one exact clean source commit.
 
 ## Limits
 
+npm registry publication: **out of scope**.
+
 This prerelease does not claim:
 
 - stable Governance 1.0 distribution status;

@@ -265,7 +265,7 @@ test('R8 short-lived production approval can be bounded in Task Authority withou
 
 test('R9 advisory context discovery finds global, overlapping-area, and direct-reference candidates without claiming completeness',async()=>fixture(async root=>{
   const manifestPath=join(root,'governance/manifest.yaml');
-  const manifest=(await readFile(manifestPath,'utf8')).replace(
+  const manifest=(await readFile(manifestPath,'utf8')).replaceAll('\r\n','\n').replace(
     'areas:\n  - global',
     'areas:\n  - global\n  - payments\n  - robotics'
   );

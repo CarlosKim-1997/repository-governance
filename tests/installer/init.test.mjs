@@ -222,7 +222,7 @@ test('Governance 1.0 snapshot without 0.2 optional operating files remains insta
 
   const versionPath=join(root,'tooling/governance/version.json');
   const historical=(await readFile(versionPath,'utf8')).replace(
-    '"distribution_version": "0.2.0"',
+    '"distribution_version": "0.3.0"',
     '"distribution_version": "0.1.0"'
   );
   await writeFile(versionPath,historical);
@@ -241,7 +241,7 @@ test('Governance 1.0 snapshot without 0.2 optional operating files remains insta
 }));
 
 
-test('distribution 0.2 installs optional operating guidance and helpers without changing Governance version',async()=>fixture(async root=>{
+test('distribution 0.3 installs optional operating guidance and helpers without changing Governance version',async()=>fixture(async root=>{
   const result=await applyInit(root,'greenfield');
   assert.equal(result.result,'INSTALLED_VERIFIED');
   for(const path of [
@@ -250,7 +250,17 @@ test('distribution 0.2 installs optional operating guidance and helpers without 
     'tooling/governance/context.mjs'
   ])assert.ok((await readFile(join(root,path),'utf8')).length>0,path);
   const version=JSON.parse(await readFile(join(root,'tooling/governance/version.json'),'utf8'));
-  assert.equal(version.distribution_version,'0.2.0');
+  assert.equal(version.distribution_version,'0.3.0');
   assert.equal(version.governance_version,'1.0.0');
   assert.equal(version.checker_version,'0.1.0');
+}));
+
+test('snapshot without optional verification additions remains installed without automatic upgrade',async()=>fixture(async root=>{
+  assert.equal((await applyInit(root,'greenfield')).result,'INSTALLED_VERIFIED');
+  const optional=['governance/VERIFICATION.md','tooling/governance/verify.mjs','tooling/governance/verification-plan.example.json'];
+  for(const path of optional)await rm(join(root,path));
+  const plan=await planInit(root,'greenfield');
+  assert.equal(plan.presence,'GOVERNANCE_INSTALLED');assert.equal(plan.upgrade_review_required,true);
+  assert.equal((await applyInit(root,'greenfield')).result,'ALREADY_INSTALLED');
+  for(const path of optional)await assert.rejects(readFile(join(root,path)));
 }));

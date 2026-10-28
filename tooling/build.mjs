@@ -13,6 +13,9 @@ for (const name of ['SPEC.md',...['decision','constraint','open-question','task'
 await copyFile(resolve(root,'adoption/OPERATIONS.md'),resolve(root,'template/governance/OPERATIONS.md'));
 await copyFile(resolve(root,'tooling/preflight/preflight.mjs'),resolve(root,'template/tooling/governance/preflight.mjs'));
 await copyFile(resolve(root,'tooling/context/context.mjs'),resolve(root,'template/tooling/governance/context.mjs'));
+await copyFile(resolve(root,'adoption/VERIFICATION.md'),resolve(root,'template/governance/VERIFICATION.md'));
+await copyFile(resolve(root,'tooling/verify/verify.mjs'),resolve(root,'template/tooling/governance/verify.mjs'));
+await copyFile(resolve(root,'tooling/verify/verification-plan.example.json'),resolve(root,'template/tooling/governance/verification-plan.example.json'));
 
 await build({
   absWorkingDir:root,

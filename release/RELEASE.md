@@ -10,17 +10,17 @@ Repository Governance tracks independent versions:
 - Distribution Version — packaged templates, guidance, installer, and helpers;
 - Checker Version — structural checker implementation.
 
-For Distribution 0.2.0:
+For Distribution 0.3.0:
 
 - Governance: `1.0.0`
-- Distribution: `0.2.0`
+- Distribution: `0.3.0`
 - Checker: `0.1.0`
 
 A Distribution release does not imply a new Governance semantic version.
 
-## Distribution 0.2.0 prerelease gate
+## Distribution 0.3.0 prerelease gate
 
-Before publishing `v0.2.0` as a GitHub prerelease:
+Before publishing `v0.3.0` as a GitHub prerelease:
 
 1. source HEAD must be committed and clean;
 2. hosted Verify Governance must pass on the exact candidate SHA;
@@ -29,7 +29,7 @@ Before publishing `v0.2.0` as a GitHub prerelease:
 5. checker, installer, R1–R10 replay, helper, symlink, compatibility, and release tests must pass;
 6. reusable files must pass project-leakage checks;
 7. the package version and installed Distribution version must agree;
-8. CHANGELOG and release notes must include 0.2.0;
+8. CHANGELOG and release notes must include 0.3.0;
 9. `npm run release:bundle` must generate source-bound release material;
 10. `npm run release:verify` must verify checksums, version/source binding, manifest hashes, and packed file selection;
 11. CI must install the packed `.tgz` into a clean harness and use that packed artifact to govern an unrelated Python repository;
@@ -38,7 +38,7 @@ Before publishing `v0.2.0` as a GitHub prerelease:
 
 Expected release assets:
 
-- `repository-governance-0.2.0.tgz`
+- `repository-governance-0.3.0.tgz`
 - `distribution-manifest.json`
 - `SHA256SUMS`
 - `release-metadata.json`
@@ -89,7 +89,7 @@ Publication must use the exact final SHA that passed the release gate.
 A human publication decision should identify:
 
 - exact source commit;
-- tag `v0.2.0`;
+- tag `v0.3.0`;
 - release classification: prerelease;
 - CI run that produced the verified artifact;
 - attached artifact/checksum set.
@@ -98,8 +98,12 @@ If any source commit changes after final verification, rerun the complete releas
 
 ## Future stable Distribution 1.0
 
-A stable Distribution 1.0 requires a separate release decision and may impose stricter evidence than the 0.2 prerelease gate, including broader clean-room adoption sampling and an explicit stability review.
+A stable Distribution 1.0 requires a separate release decision and may impose stricter evidence than the 0.3 prerelease gate, including broader clean-room adoption sampling and an explicit stability review.
 
-Building or publishing Distribution 0.2.0 does not satisfy that future stable gate.
+Building or publishing Distribution 0.3.0 does not satisfy that future stable gate.
 
 The structural checker validates shape only. Semantic adoption and release readiness remain human-reviewed.
+
+## Optional verification development workflow
+
+Local staging/package smoke may use `createReleaseStaging` and offline `npm pack` in a fresh temporary directory without running the formal release commands. It must preserve the existing build/preflight/context package surface and add only verify and its canonical/template guidance/sample. Development tests, logs and reports stay outside the archive. The default suite exercises actual packed fresh Node/Python consumers. This is development-worktree evidence; `release:bundle` and `release:verify` still require a clean committed source, so they remain BLOCKED during an uncommitted implementation. No version, tag or release is authorized by a local smoke.

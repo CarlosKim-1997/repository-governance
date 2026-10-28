@@ -76,6 +76,9 @@ const dry=JSON.parse(stdout.trim());
 if(!Array.isArray(dry) || dry.length!==1)throw new Error('npm pack dry-run returned unexpected result');
 const expected=[...(dry[0].files||[]).map(x=>x.path)].sort((a,b)=>a.localeCompare(b,'en'));
 const recorded=[...metadata.packed_files].sort((a,b)=>a.localeCompare(b,'en'));
+for(const path of ['adoption/VERIFICATION.md','template/governance/VERIFICATION.md','template/tooling/governance/verify.mjs','template/tooling/governance/verification-plan.example.json','tooling/verify/verify.mjs','tooling/verify/verification-plan.example.json']){
+  if(!recorded.includes(path))throw new Error(`optional verification path missing from release archive: ${path}`);
+}
 if(JSON.stringify(expected)!==JSON.stringify(recorded))throw new Error('packed file set no longer matches release metadata');
 if(recorded.length!==metadata.packed_file_count)throw new Error('packed file count mismatch');
 

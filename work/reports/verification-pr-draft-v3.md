@@ -1,0 +1,11 @@
+# PR draft — local only
+
+Title: Integrate optional verification on Distribution 0.2 and reject incomplete observations
+
+The reviewed helper could mark extensionless/arbitrary-suffix empty test files SATISFIED and reuse records missing execution fields or contradicting the approved invocation. The narrow Node TAP path now compares observed Subtest names against explicit invocation files, keeping file wrappers/ambiguous invocations unverified while preserving genuine named passes. Record checking validates normalized invocation, required types/times/outcomes, byte/truncation/hash/path relationships and the actual retained observations, with distinct valid shapes for non-execution and failed/interrupted runs.
+
+The optional workflow is integrated onto actual main `0aa52c6bb760471de242ac393d4e06728babe525`, preserving Distribution 0.2.0, Governance 1.0.0, Checker 0.1.0, the existing OPERATIONS/preflight/context/replay behavior and release staging/bundle/verify gates. Verification guidance is separate, generated copies are reproducible, the package allowlist includes the new sources, and missing optional files do not redefine installed snapshot recognition. Three preexisting baseline failures were repaired through an explicit release-note exclusion and portable path/newline fixture handling, retaining the same assertions and outcomes.
+
+Validation: supplied regression before 3 pass / 5 fail, after 8/8 pass unchanged; final default suite 103 pass / 0 fail / 2 existing Windows symlink EPERM skips (105 total). Core/helper/template equality, 34 artifact hashes, and an actual offline packed install into fresh Node/Python consumers passed. No new dependencies or versions. Formal release bundle/verify remain BLOCKED by the uncommitted working tree; Node 20/Linux/macOS/hosted CI remain unverified locally.
+
+This detects errors and stale/incomplete observations, without semantic acceptance, assertion-quality proof, malicious-forgery resistance or a process sandbox. Original uncommitted work was preserved byte-for-byte in its original worktree and an internal snapshot; the correction lives in a separate local worktree. No actual PR or project commit was created. See [integration report](verification-integration-v3.md).
